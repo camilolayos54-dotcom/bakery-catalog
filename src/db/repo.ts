@@ -55,3 +55,33 @@ export async function deleteProduct(id: number) {
   const db = await getDb();
   await db.runAsync('DELETE FROM products WHERE id = ?', id);
 }
+
+export type PriceOp = 'add' | 'sub' | 'mul' | 'div';
+
+/** New price in cents after applying op. `percent` makes add/sub relative to the current price. */
+export function applyOp(cents: number, op: PriceOp, value: number, percent: boolean): number {
+  let next = cents;
+  if (op === 'add') next = percent ? cents * (1 + value / 100) : cents + value * 100;
+  else if (op === 'sub') next = percent ? cents * (1 - value / 100) : cents - value * 100;
+  else if (op === 'mul') next = cents * value;
+  else if (op === 'div') next = cents / value;
+  return Math.max(0, Math.round(next));
+}
+
+export async function applyPriceOp(ids: number[], op: PriceOp, value: number, percent: boolean) {
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    for (const id of ids) {
+      const row = await db.getFirstAsync<{ price_cents: number }>('SELECT price_cents FROM products WHERE id = ?', id);
+      if (!row) continue;
+      await db.runAsync('UPDATE products SET price_cents = ? WHERE id = ?', applyOp(row.price_cents, op, value, percent), id);
+    }
+  });
+}
+
+export async function deleteProducts(ids: number[]) {
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    for (const id of ids) await db.runAsync('DELETE FROM products WHERE id = ?', id);
+  });
+}
