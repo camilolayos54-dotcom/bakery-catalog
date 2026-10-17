@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { applyOp, applyPriceOp, type PriceOp } from '@/db/repo';
+import { notify } from '@/lib/dialog';
 import { formatPrice } from '@/lib/money';
 import { useStore } from '@/store';
 
@@ -29,7 +30,7 @@ export function OperationModal({ visible, ids, onClose }: Props) {
   const sample = selected[0];
 
   async function apply() {
-    if (!valid) return Alert.alert('Escribe un valor válido');
+    if (!valid) return notify('Escribe un valor válido');
     await applyPriceOp(ids, op, value, usePercent);
     await reload();
     setText('');

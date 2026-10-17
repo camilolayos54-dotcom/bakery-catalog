@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import * as repo from '@/db/repo';
+import { confirmDialog, notify } from '@/lib/dialog';
 import { pickCover, removeImage } from '@/lib/images';
 import { formatPrice, parsePrice } from '@/lib/money';
 import { useStore } from '@/store';
@@ -40,6 +41,7 @@ export default function ProductForm() {
         setImage(uri);
       }
     };
+    if (Platform.OS === 'web') return void pick('gallery');
     Alert.alert('Portada', 'Elige el origen de la foto', [
       { text: 'Cámara', onPress: () => pick('camera') },
       { text: 'Galería', onPress: () => pick('gallery') },
@@ -49,28 +51,20 @@ export default function ProductForm() {
 
   async function save() {
     const cents = parsePrice(price);
-    if (!name.trim()) return Alert.alert('Falta el nombre');
-    if (cents === null) return Alert.alert('Precio inválido');
+    if (!name.trim()) return notify('Falta el nombre');
+    if (cents === null) return notify('Precio inválido');
     await repo.saveProduct({ name, price_cents: cents, image_uri: image, group_id: groupId }, productId);
     if (originalImage && originalImage !== image) removeImage(originalImage);
     await reload();
     router.back();
   }
 
-  function remove() {
-    Alert.alert('Eliminar producto', `¿Eliminar "${name}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          await repo.deleteProduct(productId!);
-          removeImage(originalImage);
-          await reload();
-          router.back();
-        },
-      },
-    ]);
+  async function remove() {
+    if (!(await confirmDialog('Eliminar producto', `¿Eliminar "${name}"?`))) return;
+    await repo.deleteProduct(productId!);
+    removeImage(originalImage);
+    await reload();
+    router.back();
   }
 
   const cents = parsePrice(price);

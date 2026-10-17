@@ -1,16 +1,19 @@
 import { Link, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { OperationModal } from '@/components/OperationModal';
 import { ProductCard } from '@/components/ProductCard';
 import * as repo from '@/db/repo';
+import { confirmDialog } from '@/lib/dialog';
 import { formatPrice } from '@/lib/money';
 import { removeImage } from '@/lib/images';
 import { useStore } from '@/store';
 
 export default function Catalog() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const columns = Math.max(2, Math.floor(width / 190));
   const { groups, products, loaded, reload } = useStore();
   const [groupId, setGroupId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
@@ -32,20 +35,12 @@ export default function Catalog() {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   }
 
-  function removeSelected() {
-    Alert.alert('Eliminar productos', `¿Eliminar ${selected.length} producto(s)?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          await repo.deleteProducts(selected);
-          chosen.forEach((p) => removeImage(p.image_uri));
-          setSelected([]);
-          await reload();
-        },
-      },
-    ]);
+  async function removeSelected() {
+    if (!(await confirmDialog('Eliminar productos', `¿Eliminar ${selected.length} producto(s)?`))) return;
+    await repo.deleteProducts(selected);
+    chosen.forEach((p) => removeImage(p.image_uri));
+    setSelected([]);
+    await reload();
   }
 
   return (
@@ -64,7 +59,8 @@ export default function Catalog() {
       <FlatList
         data={visible}
         keyExtractor={(p) => String(p.id)}
-        numColumns={2}
+        key={columns}
+        numColumns={columns}
         extraData={selected}
         contentContainerStyle={[styles.grid, selecting && { paddingBottom: 170 }]}
         renderItem={({ item }) => (

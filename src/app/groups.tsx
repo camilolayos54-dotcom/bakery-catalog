@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import * as repo from '@/db/repo';
+import { confirmDialog } from '@/lib/dialog';
 import { useStore } from '@/store';
 
 export default function Groups() {
@@ -18,19 +19,15 @@ export default function Groups() {
     await reload();
   }
 
-  function remove(id: number, groupName: string) {
+  async function remove(id: number, groupName: string) {
     const count = products.filter((p) => p.group_id === id).length;
-    Alert.alert('Eliminar grupo', `"${groupName}" se eliminará. ${count} producto(s) quedarán "Sin grupo".`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          await repo.deleteGroup(id);
-          await reload();
-        },
-      },
-    ]);
+    const ok = await confirmDialog(
+      'Eliminar grupo',
+      `"${groupName}" se eliminará. ${count} producto(s) quedarán "Sin grupo".`,
+    );
+    if (!ok) return;
+    await repo.deleteGroup(id);
+    await reload();
   }
 
   return (
