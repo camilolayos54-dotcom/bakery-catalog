@@ -11,10 +11,9 @@ type Props = {
   qty: number;
   onPress: () => void;
   onLongPress: () => void;
-  onEdit: () => void;
 };
 
-export function ProductCard({ product, width, qty, onPress, onLongPress, onEdit }: Props) {
+export function ProductCard({ product, width, qty, onPress, onLongPress }: Props) {
   const inCart = qty > 0;
   return (
     <View style={{ width, padding: 4 }}>
@@ -46,9 +45,6 @@ export function ProductCard({ product, width, qty, onPress, onLongPress, onEdit 
           <Text style={styles.price}>{formatPrice(product.price_cents)}</Text>
         </View>
       </Pressable>
-      <Pressable style={styles.edit} onPress={onEdit} hitSlop={6}>
-        <Text style={styles.editText}>✎</Text>
-      </Pressable>
     </View>
   );
 }
@@ -66,6 +62,4 @@ const styles = StyleSheet.create({
   info: { paddingHorizontal: 8, paddingVertical: 6 },
   name: { fontSize: 12, fontWeight: '600', color: '#2b2118' },
   price: { fontSize: 15, fontWeight: '800', color: '#b3541e' },
-  edit: { position: 'absolute', top: 8, left: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' },
-  editText: { fontSize: 14, color: '#8a4b14' },
 });

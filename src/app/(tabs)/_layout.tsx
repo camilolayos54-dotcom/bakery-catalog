@@ -8,6 +8,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      initialRouteName="index"
       screenOptions={{
         headerTintColor: '#8a4b14',
         tabBarActiveTintColor: '#b3541e',
@@ -27,6 +28,10 @@ export default function TabsLayout() {
           tabBarBadge: count > 0 ? count : undefined,
           tabBarBadgeStyle: { backgroundColor: '#b3541e' },
         }}
+      />
+      <Tabs.Screen
+        name="editor"
+        options={{ title: 'Editor', headerShown: false, tabBarIcon: () => <Text style={{ fontSize: 20 }}>✏️</Text> }}
       />
     </Tabs>
   );

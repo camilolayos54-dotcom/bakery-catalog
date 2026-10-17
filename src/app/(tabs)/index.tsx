@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
@@ -10,7 +9,6 @@ import { useStore } from '@/store';
 const PAD = 8;
 
 export default function Catalog() {
-  const router = useRouter();
   const { width } = useWindowDimensions();
   const columns = Math.max(3, Math.floor(width / 125));
   const cardWidth = (width - PAD * 2) / columns;
@@ -26,8 +24,6 @@ export default function Catalog() {
     );
   }, [products, groupId, query]);
 
-  const cartActive = Object.keys(cart).length > 0;
-
   return (
     <View style={styles.root}>
       <TextInput style={styles.search} placeholder="Buscar producto…" value={query} onChangeText={setQuery} />
@@ -38,14 +34,11 @@ export default function Catalog() {
           {groups.map((g) => (
             <Chip key={g.id} label={g.name} active={groupId === g.id} onPress={() => setGroupId(g.id)} />
           ))}
-          <Chip label="＋ Grupo" onPress={() => router.push('/groups')} />
         </ScrollView>
       </View>
 
       <Text style={styles.hint}>
-        {cartActive
-          ? 'Toca para sumar +1 · mantén pulsado para quitar · ✎ para editar'
-          : 'Mantén pulsado un producto para añadirlo a la suma · toca para editar'}
+        Toca o mantén pulsado para añadir a la suma (+1) · mantén pulsado uno ya añadido para quitarlo
       </Text>
 
       <FlatList
@@ -62,27 +55,17 @@ export default function Catalog() {
               product={item}
               width={cardWidth}
               qty={qty}
-              onEdit={() => router.push(`/product/${item.id}`)}
-              onPress={() => (cartActive ? addToCart(item.id) : router.push(`/product/${item.id}`))}
+              onPress={() => addToCart(item.id)}
               onLongPress={() => (qty > 0 ? setQty(item.id, 0) : addToCart(item.id))}
             />
           );
         }}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {loaded ? 'No hay productos. Usa + o "Varios" para agregar.' : 'Cargando…'}
+            {loaded ? 'No hay productos. Agrégalos en la pestaña Editor.' : 'Cargando…'}
           </Text>
         }
       />
-
-      <View style={styles.fabs}>
-        <Pressable style={[styles.fab, styles.fabSecondary]} onPress={() => router.push('/bulk')}>
-          <Text style={styles.fabSmall}>Varios</Text>
-        </Pressable>
-        <Pressable style={styles.fab} onPress={() => router.push('/product/new')}>
-          <Text style={styles.fabText}>+</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -107,12 +90,4 @@ const styles = StyleSheet.create({
   hint: { fontSize: 11, color: '#8a7a68', paddingHorizontal: 12, paddingBottom: 4 },
   grid: { padding: PAD, paddingBottom: 110 },
   empty: { textAlign: 'center', marginTop: 60, color: '#8a7a68', paddingHorizontal: 30 },
-  fabs: { position: 'absolute', right: 16, bottom: 18, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  fab: {
-    width: 56, height: 56, borderRadius: 28, backgroundColor: '#b3541e',
-    alignItems: 'center', justifyContent: 'center', elevation: 6,
-  },
-  fabSecondary: { width: 'auto', paddingHorizontal: 18, backgroundColor: '#8a4b14', borderRadius: 24, height: 48 },
-  fabSmall: { color: '#fff', fontWeight: '700' },
-  fabText: { color: '#fff', fontSize: 32, marginTop: -2 },
 });
