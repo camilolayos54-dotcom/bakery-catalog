@@ -22,6 +22,13 @@ export function getDb() {
           created_at INTEGER NOT NULL
         );
       `);
+      const cols = await db.getAllAsync<{ name: string }>('PRAGMA table_info(products)');
+      if (!cols.some((c) => c.name === 'promo_qty')) {
+        await db.execAsync(`
+          ALTER TABLE products ADD COLUMN promo_qty INTEGER;
+          ALTER TABLE products ADD COLUMN promo_price_cents INTEGER;
+        `);
+      }
       return db;
     });
   }

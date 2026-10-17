@@ -7,4 +7,7 @@ export type Product = {
   image_uri: string | null;
   group_id: number | null;
   created_at: number;
+  /** Promotion: buying `promo_qty` units costs `promo_price_cents` in total. */
+  promo_qty: number | null;
+  promo_price_cents: number | null;
 };

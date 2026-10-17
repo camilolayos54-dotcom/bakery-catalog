@@ -1,8 +1,5 @@
 // Web/Windows-browser implementation: same API as repo.ts, backed by localStorage.
-import { applyOp, type PriceOp } from '@/lib/priceOps';
 import type { Group, Product } from '@/types';
-
-export { applyOp, type PriceOp };
 
 type Data = { groups: Group[]; products: Product[]; nextGroupId: number; nextProductId: number };
 const KEY = 'bakery-catalog-v1';
@@ -23,11 +20,13 @@ export async function listGroups(): Promise<Group[]> {
   return load().groups.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
 }
 
-export async function addGroup(name: string) {
+export async function addGroup(name: string): Promise<number> {
   const d = load();
   const order = Math.max(0, ...d.groups.map((g) => g.sort_order)) + 1;
-  d.groups.push({ id: d.nextGroupId++, name: name.trim(), sort_order: order });
+  const id = d.nextGroupId++;
+  d.groups.push({ id, name: name.trim(), sort_order: order });
   save(d);
+  return id;
 }
 
 export async function renameGroup(id: number, name: string) {
@@ -47,14 +46,20 @@ export async function deleteGroup(id: number) {
 }
 
 export async function listProducts(): Promise<Product[]> {
-  return load().products.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  return load()
+    .products.map((p) => ({ ...p, promo_qty: p.promo_qty ?? null, promo_price_cents: p.promo_price_cents ?? null }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
 export async function getProduct(id: number): Promise<Product | null> {
-  return load().products.find((p) => p.id === id) ?? null;
+  const p = load().products.find((x) => x.id === id);
+  return p ? { ...p, promo_qty: p.promo_qty ?? null, promo_price_cents: p.promo_price_cents ?? null } : null;
 }
 
-export type ProductInput = Pick<Product, 'name' | 'price_cents' | 'image_uri' | 'group_id'>;
+export type ProductInput = Pick<
+  Product,
+  'name' | 'price_cents' | 'image_uri' | 'group_id' | 'promo_qty' | 'promo_price_cents'
+>;
 
 export async function saveProduct(input: ProductInput, id?: number) {
   const d = load();
@@ -65,22 +70,25 @@ export async function saveProduct(input: ProductInput, id?: number) {
   save(d);
 }
 
+export async function addProductsBulk(items: { name: string; price_cents: number }[], groupId: number | null) {
+  const d = load();
+  for (const it of items) {
+    d.products.push({
+      id: d.nextProductId++,
+      created_at: Date.now(),
+      name: it.name.trim(),
+      price_cents: it.price_cents,
+      image_uri: null,
+      group_id: groupId,
+      promo_qty: null,
+      promo_price_cents: null,
+    });
+  }
+  save(d);
+}
+
 export async function deleteProduct(id: number) {
   const d = load();
   d.products = d.products.filter((p) => p.id !== id);
-  save(d);
-}
-
-export async function applyPriceOp(ids: number[], op: PriceOp, value: number, percent: boolean) {
-  const d = load();
-  d.products.forEach((p) => {
-    if (ids.includes(p.id)) p.price_cents = applyOp(p.price_cents, op, value, percent);
-  });
-  save(d);
-}
-
-export async function deleteProducts(ids: number[]) {
-  const d = load();
-  d.products = d.products.filter((p) => !ids.includes(p.id));
   save(d);
 }

@@ -20,6 +20,9 @@ export default function ProductForm() {
   const [image, setImage] = useState<string | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<number | null>(null);
+  const [promoQty, setPromoQty] = useState('');
+  const [promoPrice, setPromoPrice] = useState('');
+  const [newGroup, setNewGroup] = useState('');
 
   useEffect(() => {
     if (!productId) return;
@@ -30,8 +33,20 @@ export default function ProductForm() {
       setImage(p.image_uri);
       setOriginalImage(p.image_uri);
       setGroupId(p.group_id);
+      if (p.promo_qty && p.promo_price_cents != null) {
+        setPromoQty(String(p.promo_qty));
+        setPromoPrice(String(p.promo_price_cents / 100));
+      }
     });
   }, [productId]);
+
+  async function createGroup() {
+    if (!newGroup.trim()) return;
+    const gid = await repo.addGroup(newGroup);
+    await reload();
+    setGroupId(gid);
+    setNewGroup('');
+  }
 
   function choosePhoto() {
     const pick = async (src: 'camera' | 'gallery') => {
@@ -53,7 +68,23 @@ export default function ProductForm() {
     const cents = parsePrice(price);
     if (!name.trim()) return notify('Falta el nombre');
     if (cents === null) return notify('Precio inválido');
-    await repo.saveProduct({ name, price_cents: cents, image_uri: image, group_id: groupId }, productId);
+    const pq = Math.floor(Number(promoQty));
+    const pp = parsePrice(promoPrice);
+    const wantsPromo = promoQty.trim() !== '' || promoPrice.trim() !== '';
+    if (wantsPromo && !(pq >= 2 && pp !== null)) {
+      return notify('Promoción incompleta', 'Indica cantidad (2 o más) y precio total, o deja ambos vacíos.');
+    }
+    await repo.saveProduct(
+      {
+        name,
+        price_cents: cents,
+        image_uri: image,
+        group_id: groupId,
+        promo_qty: wantsPromo ? pq : null,
+        promo_price_cents: wantsPromo ? pp : null,
+      },
+      productId,
+    );
     if (originalImage && originalImage !== image) removeImage(originalImage);
     await reload();
     router.back();
@@ -106,6 +137,37 @@ export default function ProductForm() {
           </Pressable>
         ))}
       </View>
+      <View style={styles.inline}>
+        <TextInput
+          style={[styles.input, { flex: 1, fontSize: 15 }]}
+          value={newGroup}
+          onChangeText={setNewGroup}
+          placeholder="Crear grupo nuevo (ej. Pasteles)"
+          onSubmitEditing={createGroup}
+        />
+        <Pressable style={styles.smallBtn} onPress={createGroup}>
+          <Text style={styles.smallBtnText}>Crear</Text>
+        </Pressable>
+      </View>
+
+      <Text style={styles.label}>Promoción (opcional)</Text>
+      <Text style={styles.hint}>Ej.: 3 unidades por $5.000. Se aplica sola en la pestaña Sumas.</Text>
+      <View style={styles.inline}>
+        <TextInput
+          style={[styles.input, { flex: 1 }]}
+          value={promoQty}
+          onChangeText={setPromoQty}
+          keyboardType="number-pad"
+          placeholder="Unidades"
+        />
+        <TextInput
+          style={[styles.input, { flex: 2 }]}
+          value={promoPrice}
+          onChangeText={setPromoPrice}
+          keyboardType="decimal-pad"
+          placeholder="Precio total del combo"
+        />
+      </View>
 
       <Pressable style={styles.save} onPress={save}>
         <Text style={styles.saveText}>Guardar</Text>
@@ -122,9 +184,13 @@ export default function ProductForm() {
 const styles = StyleSheet.create({
   root: { padding: 16, gap: 8, backgroundColor: '#fbf4ea' },
   cover: {
-    width: '100%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden',
+    width: '55%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden', alignSelf: 'center',
     backgroundColor: '#f1e0c8', alignItems: 'center', justifyContent: 'center',
   },
+  inline: { flexDirection: 'row', gap: 8 },
+  hint: { fontSize: 12, color: '#8a7a68' },
+  smallBtn: { backgroundColor: '#8a4b14', borderRadius: 10, paddingHorizontal: 16, justifyContent: 'center' },
+  smallBtnText: { color: '#fff', fontWeight: '700' },
   coverImg: { width: '100%', height: '100%' },
   coverHint: { fontSize: 18, color: '#8a4b14' },
   label: { marginTop: 8, fontWeight: '700', color: '#5a3a1a' },
