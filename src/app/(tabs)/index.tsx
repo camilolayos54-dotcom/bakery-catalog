@@ -1,46 +1,237 @@
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 
 import { ProductCard } from '@/components/ProductCard';
+import { SyncModal } from '@/components/SyncModal';
+import * as repo from '@/db/repo';
+import { hasPromo } from '@/lib/cart';
+import { notify } from '@/lib/dialog';
+import { pickCover } from '@/lib/images';
+import { formatPrice, parsePrice } from '@/lib/money';
 import { useStore } from '@/store';
 
 const PAD = 8;
 
 export default function Catalog() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
-  const columns = Math.max(3, Math.floor(width / 125));
+  // 2 columnas cómodas en móviles (ancho ~360-430px), escalando en pantallas más anchas
+  const columns = Math.max(2, Math.floor(width / 165));
   const cardWidth = (width - PAD * 2) / columns;
 
-  const { groups, products, loaded, cart, addToCart, setQty } = useStore();
-  const [groupId, setGroupId] = useState<number | null>(null);
+  const {
+    groups,
+    subcategories,
+    products,
+    loaded,
+    cart,
+    frequentIds,
+    addToCart,
+    removeFromCart,
+    reload,
+  } = useStore();
+
+  const [groupId, setGroupId] = useState<number | null | 'frecuentes' | 'promociones'>(null);
+  const [subcategoryId, setSubcategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
+
+  // Estado del Modal de Añadir Rápido
+  const [showQuickModal, setShowQuickModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [quickPrice, setQuickPrice] = useState('');
+  const [quickImage, setQuickImage] = useState<string | null>(null);
+  const [quickGroupId, setQuickGroupId] = useState<number | null>(null);
+  const [quickSubcategoryId, setQuickSubcategoryId] = useState<number | null>(null);
+
+  // Cantidad de productos con promociones
+  const promoCount = useMemo(() => products.filter((p) => hasPromo(p)).length, [products]);
+
+  // Subcategorías de la categoría seleccionada en catálogo
+  const activeSubcategories = useMemo(() => {
+    if (groupId === null || groupId === 'frecuentes' || groupId === 'promociones') return [];
+    return subcategories.filter((s) => s.group_id === groupId);
+  }, [subcategories, groupId]);
+
+  // Subcategorías disponibles en el modal rápido
+  const quickAvailableSubs = useMemo(() => {
+    if (quickGroupId === null) return [];
+    return subcategories.filter((s) => s.group_id === quickGroupId);
+  }, [subcategories, quickGroupId]);
+
+  function handleSelectGroup(id: number | null | 'frecuentes' | 'promociones') {
+    setGroupId(id);
+    setSubcategoryId(null); // reiniciar subcategoría al cambiar grupo
+  }
+
+  // Abre el modal rellenando automáticamente la categoría y subcategoría activas
+  function openQuickAdd() {
+    setQuickName('');
+    setQuickPrice('');
+    setQuickImage(null);
+    const targetGroupId = typeof groupId === 'number' ? groupId : (groups[0]?.id ?? null);
+    setQuickGroupId(targetGroupId);
+    setQuickSubcategoryId(subcategoryId !== null ? subcategoryId : null);
+    setShowQuickModal(true);
+  }
+
+  function handleQuickPhoto() {
+    const pick = async (src: 'camera' | 'gallery') => {
+      const uri = await pickCover(src);
+      if (uri) setQuickImage(uri);
+    };
+
+    if (Platform.OS === 'web') {
+      return void pick('gallery');
+    }
+
+    Alert.alert('Foto del producto', 'Selecciona el origen de la foto:', [
+      { text: '📷 Tomar foto con cámara', onPress: () => pick('camera') },
+      { text: '🖼️ Elegir de galería', onPress: () => pick('gallery') },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }
+
+  async function handleSaveQuick() {
+    const cents = parsePrice(quickPrice);
+    if (!quickName.trim()) {
+      return notify('Falta el nombre', 'Ingresa el nombre del producto.');
+    }
+    if (cents === null || cents <= 0) {
+      return notify('Precio inválido', 'Ingresa un precio válido (ej. 2500 o 2.500).');
+    }
+
+    await repo.saveProduct({
+      name: quickName.trim(),
+      price_cents: cents,
+      image_uri: quickImage,
+      group_id: quickGroupId,
+      subcategory_id: quickSubcategoryId,
+      promo_qty: null,
+      promo_price_cents: null,
+    });
+
+    await reload();
+    setShowQuickModal(false);
+    notify('Producto añadido', `"${quickName.trim()}" ya está en el catálogo.`);
+  }
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return products.filter(
-      (p) => (groupId === null || p.group_id === groupId) && (!q || p.name.toLowerCase().includes(q)),
-    );
-  }, [products, groupId, query]);
+
+    // Filtro especial: Productos frecuentes (ordenados de mayor a menor frecuencia)
+    if (groupId === 'frecuentes') {
+      const orderMap = new Map(frequentIds.map((id, index) => [id, index]));
+      return products
+        .filter((p) => orderMap.has(p.id) && (!q || p.name.toLowerCase().includes(q)))
+        .sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
+    }
+
+    // Filtro especial: Promociones activas en todo el catálogo
+    if (groupId === 'promociones') {
+      return products.filter((p) => hasPromo(p) && (!q || p.name.toLowerCase().includes(q)));
+    }
+
+    return products.filter((p) => {
+      const matchGroup = groupId === null || p.group_id === groupId;
+      const matchSub = subcategoryId === null || p.subcategory_id === subcategoryId;
+      const matchQuery = !q || p.name.toLowerCase().includes(q);
+      return matchGroup && matchSub && matchQuery;
+    });
+  }, [products, groupId, subcategoryId, query, frequentIds]);
+
+  const activeGroupObj = groups.find((g) => g.id === quickGroupId);
+  const activeSubObj = subcategories.find((s) => s.id === quickSubcategoryId);
+  const quickCents = parsePrice(quickPrice);
 
   return (
     <View style={styles.root}>
-      <TextInput style={styles.search} placeholder="Buscar producto…" value={query} onChangeText={setQuery} />
+      {/* Barra superior: Búsqueda y Botón de Respaldo/Sincronización */}
+      <View style={styles.topBar}>
+        <TextInput
+          style={styles.search}
+          placeholder="Buscar producto…"
+          value={query}
+          onChangeText={setQuery}
+          clearButtonMode="while-editing"
+        />
+        <Pressable
+          style={styles.syncHeaderBtn}
+          onPress={() => setShowSyncModal(true)}
+          accessibilityLabel="Sincronizar y respaldar datos"
+        >
+          <Text style={styles.syncHeaderBtnText}>🔄 Respaldo</Text>
+        </Pressable>
+      </View>
 
+      {/* Fila 1: Filtro de Categorías principales, Frecuentes y Promociones */}
       <View style={styles.chipsRow}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          <Chip label="Todos" active={groupId === null} onPress={() => setGroupId(null)} />
+          <Chip label="Todos" active={groupId === null} onPress={() => handleSelectGroup(null)} />
+          <Chip
+            label={`⭐ Frecuentes${frequentIds.length > 0 ? ` (${frequentIds.length})` : ''}`}
+            active={groupId === 'frecuentes'}
+            onPress={() => handleSelectGroup('frecuentes')}
+          />
+          <Chip
+            label={`🏷️ Promociones${promoCount > 0 ? ` (${promoCount})` : ''}`}
+            active={groupId === 'promociones'}
+            onPress={() => handleSelectGroup('promociones')}
+          />
           {groups.map((g) => (
-            <Chip key={g.id} label={g.name} active={groupId === g.id} onPress={() => setGroupId(g.id)} />
+            <Chip
+              key={g.id}
+              label={g.name}
+              active={groupId === g.id}
+              onPress={() => handleSelectGroup(g.id)}
+            />
           ))}
         </ScrollView>
       </View>
 
-      <Text style={styles.hint}>
-        Toca o mantén pulsado para añadir a la suma (+1) · mantén pulsado uno ya añadido para quitarlo
-      </Text>
+      {/* Fila 2: Filtro de Subcategorías (si la categoría seleccionada tiene) */}
+      {activeSubcategories.length > 0 ? (
+        <View style={styles.subChipsRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subChips}>
+            <SubChip
+              label="Todas las presentaciones"
+              active={subcategoryId === null}
+              onPress={() => setSubcategoryId(null)}
+            />
+            {activeSubcategories.map((s) => (
+              <SubChip
+                key={s.id}
+                label={s.name}
+                active={subcategoryId === s.id}
+                onPress={() => setSubcategoryId(s.id)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
 
+      {/* Indicador de ayuda */}
+      <View style={styles.hintWrap}>
+        <Text style={styles.hintText}>
+          Toca <Text style={styles.hintBold}>＋</Text> o <Text style={styles.hintBold}>−</Text> para sumar o restar · Mantén presionado <Text style={styles.hintBold}>2 seg</Text> para editar
+        </Text>
+      </View>
+
+      {/* Cuadrícula de productos */}
       <FlatList
         data={visible}
         key={columns}
@@ -55,17 +246,152 @@ export default function Catalog() {
               product={item}
               width={cardWidth}
               qty={qty}
-              onPress={() => addToCart(item.id)}
-              onLongPress={() => (qty > 0 ? setQty(item.id, 0) : addToCart(item.id))}
+              onIncrement={() => addToCart(item.id)}
+              onDecrement={() => removeFromCart(item.id)}
+              onEdit={() => router.push(`/editor/${item.id}`)}
             />
           );
         }}
         ListEmptyComponent={
-          <Text style={styles.empty}>
-            {loaded ? 'No hay productos. Agrégalos en la pestaña Editor.' : 'Cargando…'}
-          </Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.empty}>
+              {loaded
+                ? groupId === 'frecuentes'
+                  ? 'Aún no hay productos frecuentes.\nSe guardan automáticamente cada vez que toques "Finalizar cuenta" en la pestaña Sumas.'
+                  : groupId === 'promociones'
+                    ? 'No hay productos con promociones registradas.'
+                    : 'No hay productos en esta selección.'
+                : 'Cargando catálogo…'}
+            </Text>
+          </View>
         }
       />
+
+      {/* BOTÓN FLOTANTE (+) SIEMPRE VISIBLE */}
+      <Pressable style={styles.fab} onPress={openQuickAdd}>
+        <Text style={styles.fabIcon}>＋</Text>
+      </Pressable>
+
+      {/* MODAL DE AÑADIR PRODUCTO RÁPIDO */}
+      <Modal
+        visible={showQuickModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowQuickModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>＋ Añadir producto rápido</Text>
+                <Text style={styles.modalSubtitle}>
+                  📂 {activeGroupObj?.name ?? 'Sin categoría'}
+                  {activeSubObj ? ` › ${activeSubObj.name}` : ''}
+                </Text>
+              </View>
+              <Pressable style={styles.modalClose} onPress={() => setShowQuickModal(false)}>
+                <Text style={styles.modalCloseText}>✕</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+              {/* Foto rápida */}
+              <View style={styles.photoRow}>
+                {quickImage ? (
+                  <View style={styles.quickThumbWrap}>
+                    <Image source={{ uri: quickImage }} style={styles.quickThumb} contentFit="cover" />
+                    <Pressable style={styles.quickThumbDel} onPress={() => setQuickImage(null)}>
+                      <Text style={styles.quickThumbDelText}>✕</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                <Pressable style={styles.photoPickerBtn} onPress={handleQuickPhoto}>
+                  <Text style={styles.photoPickerText}>
+                    {quickImage ? '📷 Cambiar foto' : '📷 Añadir foto (Cámara / Galería)'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Nombre */}
+              <Text style={styles.fieldLabel}>Nombre</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={quickName}
+                onChangeText={setQuickName}
+                placeholder="Ej. Postobón 350ml, Empanada..."
+                autoFocus={true}
+              />
+
+              {/* Precio */}
+              <Text style={styles.fieldLabel}>
+                Precio {quickCents && quickCents > 0 ? `(${formatPrice(quickCents)})` : ''}
+              </Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={quickPrice}
+                onChangeText={setQuickPrice}
+                keyboardType="decimal-pad"
+                placeholder="Ej. 2500 o 2.500"
+              />
+
+              {/* Categoría (pre-seleccionada automáticamente) */}
+              <Text style={styles.fieldLabel}>Categoría detectada:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+                {groups.map((g) => (
+                  <Pressable
+                    key={g.id}
+                    onPress={() => {
+                      setQuickGroupId(g.id);
+                      setQuickSubcategoryId(null);
+                    }}
+                    style={[styles.smallChip, quickGroupId === g.id && styles.smallChipActive]}
+                  >
+                    <Text style={[styles.smallChipText, quickGroupId === g.id && styles.smallChipTextActive]}>
+                      {quickGroupId === g.id ? '✓ ' : ''}{g.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              {/* Subcategoría (si la categoría seleccionada tiene) */}
+              {quickAvailableSubs.length > 0 ? (
+                <>
+                  <Text style={styles.fieldLabel}>Subcategoría / Presentación:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+                    <Pressable
+                      onPress={() => setQuickSubcategoryId(null)}
+                      style={[styles.smallSubChip, quickSubcategoryId === null && styles.smallSubChipActive]}
+                    >
+                      <Text style={[styles.smallSubChipText, quickSubcategoryId === null && styles.smallSubChipTextActive]}>
+                        Sin subcategoría
+                      </Text>
+                    </Pressable>
+                    {quickAvailableSubs.map((s) => (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => setQuickSubcategoryId(s.id)}
+                        style={[styles.smallSubChip, quickSubcategoryId === s.id && styles.smallSubChipActive]}
+                      >
+                        <Text style={[styles.smallSubChipText, quickSubcategoryId === s.id && styles.smallSubChipTextActive]}>
+                          {quickSubcategoryId === s.id ? '✓ ' : ''}{s.name}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </>
+              ) : null}
+
+              {/* Botón Guardar */}
+              <Pressable style={styles.quickSaveBtn} onPress={handleSaveQuick}>
+                <Text style={styles.quickSaveText}>＋ Guardar y agregar al catálogo</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DE SINCRONIZACIÓN Y RESPALDO */}
+      <SyncModal visible={showSyncModal} onClose={() => setShowSyncModal(false)} />
     </View>
   );
 }
@@ -78,16 +404,288 @@ function Chip({ label, active, onPress }: { label: string; active?: boolean; onP
   );
 }
 
+function SubChip({ label, active, onPress }: { label: string; active?: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.subChip, active && styles.subChipActive]}>
+      <Text style={[styles.subChipText, active && styles.subChipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fbf4ea' },
-  search: { margin: 10, marginBottom: 2, padding: 9, backgroundColor: '#fff', borderRadius: 10, fontSize: 15 },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 8,
+  },
+  search: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#e8d7c2',
+  },
+  syncHeaderBtn: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  syncHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#92400e',
+  },
   chipsRow: { flexDirection: 'row', alignItems: 'center' },
-  chips: { paddingHorizontal: 8, paddingVertical: 8, gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#efdcc2' },
-  chipActive: { backgroundColor: '#b3541e' },
-  chipText: { color: '#5a3a1a', fontWeight: '600' },
+  chips: { paddingHorizontal: 8, paddingVertical: 6, gap: 8 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#efdcc2',
+    borderWidth: 1,
+    borderColor: '#e2cdb3',
+  },
+  chipActive: { backgroundColor: '#b3541e', borderColor: '#8b3f14' },
+  chipText: { color: '#5a3a1a', fontWeight: '700', fontSize: 13 },
   chipTextActive: { color: '#fff' },
-  hint: { fontSize: 11, color: '#8a7a68', paddingHorizontal: 12, paddingBottom: 4 },
+
+  subChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5eadb',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#eedac4',
+  },
+  subChips: { paddingHorizontal: 8, paddingVertical: 5, gap: 6 },
+  subChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#dec9b0',
+  },
+  subChipActive: { backgroundColor: '#6e3c12', borderColor: '#4a2507' },
+  subChipText: { color: '#6e3c12', fontWeight: '600', fontSize: 12 },
+  subChipTextActive: { color: '#fff', fontWeight: '700' },
+
+  hintWrap: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    backgroundColor: '#f5ecdf',
+  },
+  hintText: { fontSize: 11, color: '#7a6a58', textAlign: 'center' },
+  hintBold: { fontWeight: '800', color: '#5a3a1a' },
+
   grid: { padding: PAD, paddingBottom: 110 },
-  empty: { textAlign: 'center', marginTop: 60, color: '#8a7a68', paddingHorizontal: 30 },
+  emptyContainer: { alignItems: 'center', marginTop: 60, paddingHorizontal: 30 },
+  empty: { textAlign: 'center', color: '#8a7a68', fontSize: 15 },
+
+  /* Floating Action Button (FAB) */
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#b3541e',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    zIndex: 999,
+  },
+  fabIcon: {
+    color: '#fff',
+    fontSize: 34,
+    fontWeight: '900',
+    marginTop: -3,
+  },
+
+  /* Modal Rápido */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: '#fbf4ea',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 18,
+    maxHeight: '88%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderColor: '#e8d4be',
+    paddingBottom: 12,
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#5a3a1a',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#b3541e',
+    marginTop: 2,
+  },
+  modalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#eeddcb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#6e3c12',
+  },
+  modalBody: {
+    paddingBottom: 24,
+    gap: 8,
+  },
+  photoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 4,
+  },
+  quickThumbWrap: {
+    position: 'relative',
+    width: 54,
+    height: 54,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  quickThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  quickThumbDel: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickThumbDelText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  photoPickerBtn: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#e2cfb7',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  photoPickerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#8a4b14',
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#5a3a1a',
+    marginTop: 6,
+  },
+  fieldInput: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e4cdb2',
+  },
+  chipsScroll: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  smallChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#eeddcb',
+  },
+  smallChipActive: {
+    backgroundColor: '#b3541e',
+  },
+  smallChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5a3a1a',
+  },
+  smallChipTextActive: {
+    color: '#fff',
+    fontWeight: '800',
+  },
+  smallSubChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#dec9b0',
+  },
+  smallSubChipActive: {
+    backgroundColor: '#6e3c12',
+    borderColor: '#4a2507',
+  },
+  smallSubChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6e3c12',
+  },
+  smallSubChipTextActive: {
+    color: '#fff',
+    fontWeight: '800',
+  },
+  quickSaveBtn: {
+    backgroundColor: '#b3541e',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  quickSaveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
 });

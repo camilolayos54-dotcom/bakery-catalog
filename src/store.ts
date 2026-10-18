@@ -1,34 +1,86 @@
 import { create } from 'zustand';
 
 import * as repo from '@/db/repo';
-import type { Group, Product } from '@/types';
+import type { Group, Product, Subcategory } from '@/types';
 
 type State = {
   groups: Group[];
+  subcategories: Subcategory[];
   products: Product[];
   loaded: boolean;
   /** Running sum ("cuenta"): product id -> quantity. */
   cart: Record<number, number>;
+  /** IDs de los productos más vendidos / frecuentes ordenados por frecuencia */
+  frequentIds: number[];
   reload: () => Promise<void>;
+  seedCatalog: (force?: boolean) => Promise<void>;
   addToCart: (id: number) => void;
+  removeFromCart: (id: number) => void;
   setQty: (id: number, qty: number) => void;
   clearCart: () => void;
+  finishSale: () => Promise<void>;
 };
 
-export const useStore = create<State>((set) => ({
+export const useStore = create<State>((set, get) => ({
   groups: [],
+  subcategories: [],
   products: [],
   loaded: false,
   cart: {},
+  frequentIds: [],
   reload: async () => {
-    const [groups, products] = await Promise.all([repo.listGroups(), repo.listProducts()]);
+    await repo.seedInitialData(false);
+    const [groups, subcategories, products, stats] = await Promise.all([
+      repo.listGroups(),
+      repo.listSubcategories(),
+      repo.listProducts(),
+      repo.getFrequentProductIds(),
+    ]);
     set((s) => {
       const ids = new Set(products.map((p) => p.id));
       const cart = Object.fromEntries(Object.entries(s.cart).filter(([id]) => ids.has(Number(id))));
-      return { groups, products, loaded: true, cart };
+      return {
+        groups,
+        subcategories,
+        products,
+        loaded: true,
+        cart,
+        frequentIds: stats.map((x) => x.product_id),
+      };
     });
   },
-  addToCart: (id) => set((s) => ({ cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 } })),
+  seedCatalog: async (force = false) => {
+    await repo.seedInitialData(force);
+    const [groups, subcategories, products, stats] = await Promise.all([
+      repo.listGroups(),
+      repo.listSubcategories(),
+      repo.listProducts(),
+      repo.getFrequentProductIds(),
+    ]);
+    set({
+      groups,
+      subcategories,
+      products,
+      loaded: true,
+      cart: {},
+      frequentIds: stats.map((x) => x.product_id),
+    });
+  },
+  addToCart: (id) =>
+    set((s) => ({
+      cart: { ...s.cart, [id]: (s.cart[id] ?? 0) + 1 },
+    })),
+  removeFromCart: (id) =>
+    set((s) => {
+      const current = s.cart[id] ?? 0;
+      const cart = { ...s.cart };
+      if (current <= 1) {
+        delete cart[id];
+      } else {
+        cart[id] = current - 1;
+      }
+      return { cart };
+    }),
   setQty: (id, qty) =>
     set((s) => {
       const cart = { ...s.cart };
@@ -37,4 +89,13 @@ export const useStore = create<State>((set) => ({
       return { cart };
     }),
   clearCart: () => set({ cart: {} }),
+  finishSale: async () => {
+    const currentCart = get().cart;
+    await repo.recordSale(currentCart);
+    const stats = await repo.getFrequentProductIds();
+    set({
+      cart: {},
+      frequentIds: stats.map((x) => x.product_id),
+    });
+  },
 }));

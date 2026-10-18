@@ -41,5 +41,6 @@ example
 # generated native folders
 /ios
 /android
-
 .claude/
+@Milo_Lian.zip
+chat_data/

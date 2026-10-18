@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { hasPromo, lineSavings, lineTotal, promoLabel } from '@/lib/cart';
+import { notify } from '@/lib/dialog';
 import { formatPrice, parsePrice } from '@/lib/money';
 import { useStore } from '@/store';
 
 export default function Sumas() {
-  const { products, cart, addToCart, setQty, clearCart } = useStore();
+  const { products, cart, addToCart, removeFromCart, setQty, clearCart, finishSale } = useStore();
   const [discount, setDiscount] = useState('');
   const [discountPct, setDiscountPct] = useState(true);
   const [extra, setExtra] = useState('');
@@ -39,12 +40,34 @@ export default function Sumas() {
   const receivedCents = parsePrice(received);
   const change = receivedCents != null ? receivedCents - total : null;
 
+  async function handleFinishSale() {
+    if (lines.length === 0) return;
+    const finalTotalFormatted = formatPrice(total);
+    await finishSale();
+    setDiscount('');
+    setExtra('');
+    setPeople('');
+    setReceived('');
+    notify(
+      '¡Venta finalizada con éxito!',
+      `Total: ${finalTotalFormatted} (${units} unidades). Los productos se registraron en la categoría "⭐ Frecuentes".`,
+    );
+  }
+
+  function handleClear() {
+    clearCart();
+    setDiscount('');
+    setExtra('');
+    setPeople('');
+    setReceived('');
+  }
+
   if (lines.length === 0) {
     return (
       <View style={[styles.root, styles.emptyBox]}>
         <Text style={styles.emptyEmoji}>🧮</Text>
         <Text style={styles.empty}>
-          Aún no hay nada sumado.{'\n'}En Productos, mantén pulsado un producto para añadirlo.
+          Aún no hay nada en la cuenta.{'\n'}En Productos, usa ＋ para añadir lo que el cliente vaya a llevar.
         </Text>
       </View>
     );
@@ -62,7 +85,7 @@ export default function Sumas() {
             {saved > 0 ? <Text style={styles.saved}>Ahorras {formatPrice(saved)}</Text> : null}
           </View>
           <View style={styles.stepper}>
-            <Pressable style={styles.stepBtn} onPress={() => setQty(p.id, qty - 1)}><Text style={styles.stepText}>−</Text></Pressable>
+            <Pressable style={styles.stepBtn} onPress={() => removeFromCart(p.id)}><Text style={styles.stepText}>−</Text></Pressable>
             <Text style={styles.qty}>{qty}</Text>
             <Pressable style={styles.stepBtn} onPress={() => addToCart(p.id)}><Text style={styles.stepText}>+</Text></Pressable>
           </View>
@@ -87,7 +110,7 @@ export default function Sumas() {
         {extraCents > 0 ? <Row label="Extra" value={`+ ${formatPrice(extraCents)}`} /> : null}
 
         <View style={styles.totalBox}>
-          <Text style={styles.totalLabel}>TOTAL</Text>
+          <Text style={styles.totalLabel}>TOTAL A PAGAR</Text>
           <Text style={styles.totalValue}>{formatPrice(total)}</Text>
         </View>
 
@@ -102,14 +125,14 @@ export default function Sumas() {
         ) : null}
       </View>
 
-      <Pressable
-        style={styles.clear}
-        onPress={() => {
-          clearCart();
-          setDiscount(''); setExtra(''); setPeople(''); setReceived('');
-        }}
-      >
-        <Text style={styles.clearText}>Nueva cuenta (vaciar)</Text>
+      {/* BOTÓN FINALIZAR SUMA Y GUARDAR FRECUENTES */}
+      <Pressable style={styles.finishBtn} onPress={handleFinishSale}>
+        <Text style={styles.finishBtnText}>✅ Finalizar cuenta y registrar venta</Text>
+        <Text style={styles.finishBtnSub}>Guarda en "⭐ Frecuentes" y vacía la cuenta para el siguiente cliente</Text>
+      </Pressable>
+
+      <Pressable style={styles.clear} onPress={handleClear}>
+        <Text style={styles.clearText}>Vaciar cuenta sin registrar</Text>
       </Pressable>
     </ScrollView>
   );
@@ -126,7 +149,7 @@ function Row({ label, value, green, bold }: { label: string; value: string; gree
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fbf4ea' },
-  content: { padding: 12, gap: 8, paddingBottom: 40 },
+  content: { padding: 12, gap: 8, paddingBottom: 90 },
   emptyBox: { alignItems: 'center', justifyContent: 'center', padding: 30 },
   emptyEmoji: { fontSize: 48, marginBottom: 8 },
   empty: { textAlign: 'center', color: '#8a7a68', fontSize: 15, lineHeight: 22 },
@@ -153,6 +176,32 @@ const styles = StyleSheet.create({
   totalBox: { marginTop: 10, backgroundColor: '#2b2118', borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { color: '#efdcc2', fontWeight: '700', fontSize: 14 },
   totalValue: { color: '#fff', fontWeight: '900', fontSize: 28 },
-  clear: { padding: 14, alignItems: 'center' },
-  clearText: { color: '#c0392b', fontWeight: '700' },
+
+  finishBtn: {
+    backgroundColor: '#2e7d32',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginTop: 10,
+    elevation: 3,
+    shadowColor: '#1b5e20',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  finishBtnText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  finishBtnSub: {
+    color: '#c8e6c9',
+    fontSize: 12,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  clear: { padding: 12, alignItems: 'center' },
+  clearText: { color: '#8a7a68', fontWeight: '600', fontSize: 13 },
 });

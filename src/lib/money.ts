@@ -2,9 +2,9 @@ export function formatPrice(cents: number) {
   return `$${(cents / 100).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
-/** "1.500", "1500,50" or "1500.5" -> cents. Returns null if invalid. */
+/** "1.500", "$1500", "1500,50" or "1500.5" -> cents. Returns null if invalid. */
 export function parsePrice(text: string): number | null {
-  const t = text.trim().replace(/\s/g, '');
+  const t = text.trim().replace(/[\$\s]/g, '');
   if (!t) return null;
   const normalized = /,\d{1,2}$/.test(t)
     ? t.replace(/\./g, '').replace(',', '.')

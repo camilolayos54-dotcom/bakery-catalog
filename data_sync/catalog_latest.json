@@ -1,0 +1,1433 @@
+{
+  "version": 1,
+  "exported_at": 1792287756082,
+  "exported_at_readable": "17/10/2026, 8:42:36 p. m.",
+  "groups": [
+    {
+      "id": 1,
+      "name": "Panadería Horneada",
+      "sort_order": 1
+    },
+    {
+      "id": 2,
+      "name": "Fritos y Empanadas",
+      "sort_order": 2
+    },
+    {
+      "id": 3,
+      "name": "Tortas y Pastelería",
+      "sort_order": 3
+    },
+    {
+      "id": 4,
+      "name": "Gaseosas y Maltas",
+      "sort_order": 4
+    },
+    {
+      "id": 5,
+      "name": "Aguas e Hidratantes",
+      "sort_order": 5
+    },
+    {
+      "id": 6,
+      "name": "Lácteos",
+      "sort_order": 6
+    },
+    {
+      "id": 7,
+      "name": "Cervezas",
+      "sort_order": 7
+    },
+    {
+      "id": 8,
+      "name": "Snacks, Dulces y Cigarrillos",
+      "sort_order": 8
+    }
+  ],
+  "subcategories": [
+    {
+      "id": 1,
+      "group_id": 1,
+      "name": "Panes Tradicionales y Rellenos",
+      "sort_order": 1
+    },
+    {
+      "id": 2,
+      "group_id": 1,
+      "name": "Croissants",
+      "sort_order": 2
+    },
+    {
+      "id": 3,
+      "group_id": 1,
+      "name": "Pasteles y Hojaldres",
+      "sort_order": 3
+    },
+    {
+      "id": 4,
+      "group_id": 2,
+      "name": "Empanadas",
+      "sort_order": 1
+    },
+    {
+      "id": 5,
+      "group_id": 2,
+      "name": "Fritos Típicos",
+      "sort_order": 2
+    },
+    {
+      "id": 6,
+      "group_id": 2,
+      "name": "Buñuelos",
+      "sort_order": 3
+    },
+    {
+      "id": 7,
+      "group_id": 3,
+      "name": "Tortas",
+      "sort_order": 1
+    },
+    {
+      "id": 8,
+      "group_id": 3,
+      "name": "Postres y Gelatinas",
+      "sort_order": 2
+    },
+    {
+      "id": 9,
+      "group_id": 3,
+      "name": "Dulces y Repostería",
+      "sort_order": 3
+    },
+    {
+      "id": 10,
+      "group_id": 4,
+      "name": "Postobón",
+      "sort_order": 1
+    },
+    {
+      "id": 11,
+      "group_id": 4,
+      "name": "Maltas",
+      "sort_order": 2
+    },
+    {
+      "id": 12,
+      "group_id": 4,
+      "name": "Jugos Hit",
+      "sort_order": 3
+    },
+    {
+      "id": 13,
+      "group_id": 4,
+      "name": "Del Valle",
+      "sort_order": 4
+    },
+    {
+      "id": 14,
+      "group_id": 4,
+      "name": "Otras Bebidas",
+      "sort_order": 5
+    },
+    {
+      "id": 15,
+      "group_id": 5,
+      "name": "Aguas",
+      "sort_order": 1
+    },
+    {
+      "id": 16,
+      "group_id": 5,
+      "name": "Energizantes e Hidratantes",
+      "sort_order": 2
+    },
+    {
+      "id": 17,
+      "group_id": 6,
+      "name": "Yogurt y Avena",
+      "sort_order": 1
+    },
+    {
+      "id": 18,
+      "group_id": 6,
+      "name": "Leches y Chocolatadas",
+      "sort_order": 2
+    },
+    {
+      "id": 19,
+      "group_id": 7,
+      "name": "Nacionales",
+      "sort_order": 1
+    },
+    {
+      "id": 20,
+      "group_id": 7,
+      "name": "Importadas / Premium",
+      "sort_order": 2
+    },
+    {
+      "id": 21,
+      "group_id": 8,
+      "name": "Cigarrillos",
+      "sort_order": 1
+    },
+    {
+      "id": 22,
+      "group_id": 8,
+      "name": "Chicles y Caramelos",
+      "sort_order": 2
+    },
+    {
+      "id": 23,
+      "group_id": 8,
+      "name": "Snacks Salados",
+      "sort_order": 3
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "Almojábana",
+      "price_cents": 130000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": 4,
+      "promo_price_cents": 500000
+    },
+    {
+      "id": 2,
+      "name": "Pan agridulce",
+      "price_cents": 90000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": 3,
+      "promo_price_cents": 250000
+    },
+    {
+      "id": 3,
+      "name": "Pan chino",
+      "price_cents": 100000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 4,
+      "name": "Palitroques",
+      "price_cents": 60000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 3,
+      "created_at": 1792287756081,
+      "promo_qty": 4,
+      "promo_price_cents": 200000
+    },
+    {
+      "id": 5,
+      "name": "Pan crema",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 6,
+      "name": "Croissant de jamón y queso (personal)",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 2,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 7,
+      "name": "Croissant de jamón y queso (grande)",
+      "price_cents": 800000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 2,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 8,
+      "name": "Croissant de queso",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 2,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 9,
+      "name": "Croissant de chocolate",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 2,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 10,
+      "name": "Pan mariquiteño (pequeño)",
+      "price_cents": 200000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 11,
+      "name": "Pan mariquiteño (grande)",
+      "price_cents": 1000000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 12,
+      "name": "Pan tradicional",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 13,
+      "name": "Pan Hawaiano",
+      "price_cents": 600000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 14,
+      "name": "Pan ranchero",
+      "price_cents": 1000000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 15,
+      "name": "Pan de maíz y queso",
+      "price_cents": 800000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 16,
+      "name": "Pan chocha",
+      "price_cents": 800000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 17,
+      "name": "Mogolla de mozzarella",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 18,
+      "name": "Pan galleta",
+      "price_cents": 300000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 1,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 19,
+      "name": "Palito de queso horneado",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 3,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 20,
+      "name": "Pastel de queso y arequipe",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 3,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 21,
+      "name": "Pastel de guayaba y queso",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 3,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 22,
+      "name": "Pastel de arequipe",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 3,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 23,
+      "name": "Chicharrón horneado",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 1,
+      "subcategory_id": 3,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 24,
+      "name": "Empanada paisa",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 4,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 25,
+      "name": "Empanada papa y carne",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 4,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 26,
+      "name": "Empanada arroz y carne",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 4,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 27,
+      "name": "Palito de queso frito",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 5,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 28,
+      "name": "Pastel de pollo",
+      "price_cents": 500000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 5,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 29,
+      "name": "Arepa de huevo",
+      "price_cents": 500000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 5,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 30,
+      "name": "Papa rellena",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 5,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 31,
+      "name": "Buñuelo pequeño",
+      "price_cents": 50000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 6,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 32,
+      "name": "Buñuelo mediano",
+      "price_cents": 100000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 6,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 33,
+      "name": "Buñuelo grande",
+      "price_cents": 200000,
+      "image_uri": null,
+      "group_id": 2,
+      "subcategory_id": 6,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 34,
+      "name": "Torta grande",
+      "price_cents": 6000000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 7,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 35,
+      "name": "Torta media",
+      "price_cents": 3700000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 7,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 36,
+      "name": "Torta pequeña",
+      "price_cents": 2500000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 7,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 37,
+      "name": "Porción de torta",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 7,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 38,
+      "name": "Torta de choclo",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 7,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 39,
+      "name": "Postre de la casa",
+      "price_cents": 1200000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 8,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 40,
+      "name": "Postre de pan",
+      "price_cents": 1000000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 8,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 41,
+      "name": "Postre de gelatina grande",
+      "price_cents": 800000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 8,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 42,
+      "name": "Gelatina",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 8,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 43,
+      "name": "Piononitos",
+      "price_cents": 200000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 44,
+      "name": "Rollo decorado",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 45,
+      "name": "Rollo rojo",
+      "price_cents": 300000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 46,
+      "name": "Suspiro",
+      "price_cents": 150000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 47,
+      "name": "Corazón de chocolate",
+      "price_cents": 300000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 48,
+      "name": "Pera",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 49,
+      "name": "Milhoja",
+      "price_cents": 450000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 50,
+      "name": "Encarcelado",
+      "price_cents": 450000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 51,
+      "name": "Cocada",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 52,
+      "name": "Alfajor",
+      "price_cents": 150000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 53,
+      "name": "Galletas de figura",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 54,
+      "name": "Galletas tradicionales",
+      "price_cents": 150000,
+      "image_uri": null,
+      "group_id": 3,
+      "subcategory_id": 9,
+      "created_at": 1792287756081,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 55,
+      "name": "Postobón chiquita",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 10,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 56,
+      "name": "Postobón 400 ml",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 10,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 57,
+      "name": "Postobón Litro",
+      "price_cents": 550000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 10,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 58,
+      "name": "Postobón Litro y medio",
+      "price_cents": 750000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 10,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 59,
+      "name": "Malta chiquita",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 11,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 60,
+      "name": "Malta Vidrio",
+      "price_cents": 370000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 11,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 61,
+      "name": "Malta Personal",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 11,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 62,
+      "name": "Malta Litro",
+      "price_cents": 650000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 11,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 63,
+      "name": "Malta Litro y cuarto",
+      "price_cents": 850000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 11,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 64,
+      "name": "Hit personal",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 12,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 65,
+      "name": "Hit grande",
+      "price_cents": 650000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 12,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 66,
+      "name": "Hit de caja",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 12,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 67,
+      "name": "Del Valle personal",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 13,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 68,
+      "name": "Del Valle litro y medio",
+      "price_cents": 700000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 13,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 69,
+      "name": "Gaseosas en vidrio",
+      "price_cents": 370000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 14,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 70,
+      "name": "Mr Tea",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 14,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 71,
+      "name": "Tampico",
+      "price_cents": 150000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 14,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 72,
+      "name": "Bretaña",
+      "price_cents": 700000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 14,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 73,
+      "name": "Soda / Soda Pool",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 14,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 74,
+      "name": "Hatsu soda",
+      "price_cents": 500000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 14,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 75,
+      "name": "H2O",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 4,
+      "subcategory_id": 14,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 76,
+      "name": "Agua pequeña",
+      "price_cents": 150000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 15,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 77,
+      "name": "Agua con gas",
+      "price_cents": 200000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 15,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 78,
+      "name": "Agua saborizada",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 15,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 79,
+      "name": "Agua personal",
+      "price_cents": 300000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 15,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 80,
+      "name": "Agua Cristal con gas",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 15,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 81,
+      "name": "Gatorade",
+      "price_cents": 550000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 82,
+      "name": "Hidralyte",
+      "price_cents": 600000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 83,
+      "name": "Saviloe pequeño",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 84,
+      "name": "Saviloe grande",
+      "price_cents": 450000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 85,
+      "name": "Speed Max chiquito",
+      "price_cents": 300000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 86,
+      "name": "Speed Max grande",
+      "price_cents": 500000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 87,
+      "name": "Vive 100 pequeño",
+      "price_cents": 300000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 88,
+      "name": "Vive 100 personal",
+      "price_cents": 450000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 89,
+      "name": "Vive 100 grande",
+      "price_cents": 600000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 90,
+      "name": "AMPER",
+      "price_cents": 500000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 91,
+      "name": "Like",
+      "price_cents": 600000,
+      "image_uri": null,
+      "group_id": 5,
+      "subcategory_id": 16,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 92,
+      "name": "Yogo Yogo vaso",
+      "price_cents": 500000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 17,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 93,
+      "name": "Yogo Yogo bolsa",
+      "price_cents": 350000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 17,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 94,
+      "name": "Alquemix chiquito",
+      "price_cents": 450000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 17,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 95,
+      "name": "Alquemix grande",
+      "price_cents": 500000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 17,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 96,
+      "name": "BONJOUR",
+      "price_cents": 550000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 17,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 97,
+      "name": "Alpin bolsa",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 18,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 98,
+      "name": "Alpin caja",
+      "price_cents": 450000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 18,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 99,
+      "name": "Chocoleche",
+      "price_cents": 450000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 18,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 100,
+      "name": "Milo caja",
+      "price_cents": 400000,
+      "image_uri": null,
+      "group_id": 6,
+      "subcategory_id": 18,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 101,
+      "name": "Cerveza Andina",
+      "price_cents": 500000,
+      "image_uri": null,
+      "group_id": 7,
+      "subcategory_id": 19,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 102,
+      "name": "Cerveza Poker",
+      "price_cents": 600000,
+      "image_uri": null,
+      "group_id": 7,
+      "subcategory_id": 19,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 103,
+      "name": "Cerveza Club Colombia",
+      "price_cents": 800000,
+      "image_uri": null,
+      "group_id": 7,
+      "subcategory_id": 19,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 104,
+      "name": "Cerveza Heineken",
+      "price_cents": 700000,
+      "image_uri": null,
+      "group_id": 7,
+      "subcategory_id": 20,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 105,
+      "name": "Cigarrillo Marlboro",
+      "price_cents": 100000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 21,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 106,
+      "name": "Cigarrillo Star Lite",
+      "price_cents": 80000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 21,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 107,
+      "name": "Cigarrillo Mentolado",
+      "price_cents": 120000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 21,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 108,
+      "name": "Cuates chiquitos",
+      "price_cents": 550000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 23,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 109,
+      "name": "Cuates grandes",
+      "price_cents": 850000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 23,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 110,
+      "name": "Paquete de Trident",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 22,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 111,
+      "name": "Trident caja",
+      "price_cents": 150000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 22,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 112,
+      "name": "Trident individuales",
+      "price_cents": 50000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 22,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    },
+    {
+      "id": 113,
+      "name": "Halls barra",
+      "price_cents": 250000,
+      "image_uri": null,
+      "group_id": 8,
+      "subcategory_id": 22,
+      "created_at": 1792287756082,
+      "promo_qty": null,
+      "promo_price_cents": null
+    }
+  ],
+  "frequencies": {}
+}

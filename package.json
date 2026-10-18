@@ -7,6 +7,7 @@
     "expo": "~57.0.26",
     "expo-constants": "~57.0.20",
     "expo-device": "~57.0.2",
+    "expo-document-picker": "~57.0.3",
     "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.4",
     "expo-glass-effect": "~57.0.4",
@@ -14,6 +15,7 @@
     "expo-image-picker": "~57.0.20",
     "expo-linking": "~57.0.11",
     "expo-router": "~57.0.24",
+    "expo-sharing": "~57.0.23",
     "expo-splash-screen": "~57.0.9",
     "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
@@ -32,6 +34,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
   },
@@ -41,7 +44,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "sync:export": "tsx scripts/sync_data.ts export",
+    "sync:info": "tsx scripts/sync_data.ts info"
   },
   "private": true
 }

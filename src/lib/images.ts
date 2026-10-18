@@ -7,23 +7,34 @@ export async function pickCover(source: 'camera' | 'gallery'): Promise<string | 
     mediaTypes: ['images'],
     allowsEditing: true,
     aspect: [1, 1],
-    quality: 0.6,
+    quality: 0.7,
   };
+
   if (source === 'camera') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return null;
+  } else {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return null;
   }
+
   const result =
     source === 'camera'
       ? await ImagePicker.launchCameraAsync(options)
       : await ImagePicker.launchImageLibraryAsync(options);
-  if (result.canceled) return null;
 
-  const dir = new Directory(Paths.document, 'images');
-  if (!dir.exists) dir.create();
-  const dest = new File(dir, `${Date.now()}.jpg`);
-  new File(result.assets[0].uri).copy(dest);
-  return dest.uri;
+  if (result.canceled || !result.assets || result.assets.length === 0) return null;
+
+  const rawUri = result.assets[0].uri;
+  try {
+    const dir = new Directory(Paths.document, 'images');
+    if (!dir.exists) dir.create();
+    const dest = new File(dir, `${Date.now()}.jpg`);
+    new File(rawUri).copy(dest);
+    return dest.uri;
+  } catch {
+    return rawUri;
+  }
 }
 
 export function removeImage(uri: string | null) {
