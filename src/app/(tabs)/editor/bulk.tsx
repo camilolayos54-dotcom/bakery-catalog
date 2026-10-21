@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import * as repo from '@/db/repo';
 import { notify } from '@/lib/dialog';
-import { formatPrice, parsePrice } from '@/lib/money';
+import { formatPrice, isSellablePrice, parsePrice } from '@/lib/money';
 import { useStore } from '@/store';
 
 /** Parses "Pan de bono 2500", "Croissant, 4.000" or "Torta - $15000" (price = last token). */
@@ -12,7 +12,7 @@ function parseLine(line: string): { name: string; price_cents: number } | null {
   const m = line.trim().match(/^(.*?)[\s,;:\-–=]+\$?\s*([\d][\d.,]*)\s*$/);
   if (!m || !m[1].trim()) return null;
   const price = parsePrice(m[2]);
-  return price === null ? null : { name: m[1].trim(), price_cents: price };
+  return isSellablePrice(price) ? { name: m[1].trim(), price_cents: price } : null;
 }
 
 export default function Bulk() {

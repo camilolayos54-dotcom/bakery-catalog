@@ -3,6 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 
 import * as repo from '@/db/repo';
 import { confirmDialog, notify } from '@/lib/dialog';
+import { isDuplicateError, normalizeName } from '@/lib/names';
 import { useStore } from '@/store';
 
 export default function Groups() {
@@ -16,10 +17,14 @@ export default function Groups() {
 
   async function submit() {
     if (!name.trim()) return;
-    if (editingId) {
-      await repo.renameGroup(editingId, name);
-    } else {
-      await repo.addGroup(name);
+    const clash = groups.find((g) => g.id !== editingId && normalizeName(g.name) === normalizeName(name));
+    if (clash) return notify('Esa categoría ya existe', `Ya tienes una categoría llamada "${clash.name}".`);
+    try {
+      if (editingId) await repo.renameGroup(editingId, name);
+      else await repo.addGroup(name);
+    } catch (e) {
+      if (isDuplicateError(e)) return notify('Esa categoría ya existe');
+      throw e;
     }
     setName('');
     setEditingId(null);
@@ -49,6 +54,8 @@ export default function Groups() {
 
   async function handleAddSub(groupId: number) {
     if (!newSubName.trim()) return;
+    const clash = subcategories.find((s) => s.group_id === groupId && normalizeName(s.name) === normalizeName(newSubName));
+    if (clash) return notify('Esa subcategoría ya existe', `Ya existe "${clash.name}" en esta categoría.`);
     await repo.addSubcategory(groupId, newSubName);
     setNewSubName('');
     await reload();
@@ -67,7 +74,7 @@ export default function Groups() {
   async function handleResetToInitial() {
     const ok = await confirmDialog(
       'Restaurar catálogo completo',
-      '¿Deseas restaurar todas las categorías, subcategorías y los productos iniciales? Se reinicializará la base de datos.',
+      '¿Deseas restaurar el catálogo inicial? Se BORRARÁN todas tus categorías y productos actuales (incluidos los que agregaste y los cambios de precio), y si tienes una carpeta Bakery vinculada también se actualizará. Esto no se puede deshacer.',
     );
     if (!ok) return;
     await seedCatalog(true);

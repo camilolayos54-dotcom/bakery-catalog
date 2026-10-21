@@ -1,4 +1,5 @@
 // Web/Windows-browser implementation: same API as repo.ts, backed by localStorage.
+import { DUPLICATE_NAME, normalizeName } from '@/lib/names';
 import type { BackupPayload, Group, Product, Subcategory } from '@/types';
 import { INITIAL_CATALOG } from './initialData';
 
@@ -106,8 +107,11 @@ export async function listGroups(): Promise<Group[]> {
   return load().groups.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
 }
 
+/** Adds a group; if one with the same name already exists (ignoring case/accents) returns that one. */
 export async function addGroup(name: string): Promise<number> {
   const d = load();
+  const same = d.groups.find((g) => normalizeName(g.name) === normalizeName(name));
+  if (same) return same.id;
   const order = Math.max(0, ...d.groups.map((g) => g.sort_order)) + 1;
   const id = d.nextGroupId++;
   d.groups.push({ id, name: name.trim(), sort_order: order });
@@ -117,6 +121,9 @@ export async function addGroup(name: string): Promise<number> {
 
 export async function renameGroup(id: number, name: string) {
   const d = load();
+  if (d.groups.some((g) => g.id !== id && normalizeName(g.name) === normalizeName(name))) {
+    throw new Error(DUPLICATE_NAME);
+  }
   const g = d.groups.find((x) => x.id === id);
   if (g) g.name = name.trim();
   save(d);
@@ -171,6 +178,8 @@ export async function listSubcategories(groupId?: number): Promise<Subcategory[]
 export async function addSubcategory(groupId: number, name: string): Promise<number> {
   const d = load();
   const existing = d.subcategories.filter((s) => s.group_id === groupId);
+  const same = existing.find((s) => normalizeName(s.name) === normalizeName(name));
+  if (same) return same.id;
   const order = Math.max(0, ...existing.map((s) => s.sort_order)) + 1;
   const id = d.nextSubcategoryId++;
   d.subcategories.push({ id, group_id: groupId, name: name.trim(), sort_order: order });
@@ -181,6 +190,12 @@ export async function addSubcategory(groupId: number, name: string): Promise<num
 export async function renameSubcategory(id: number, name: string) {
   const d = load();
   const s = d.subcategories.find((x) => x.id === id);
+  if (
+    s &&
+    d.subcategories.some((o) => o.id !== id && o.group_id === s.group_id && normalizeName(o.name) === normalizeName(name))
+  ) {
+    throw new Error(DUPLICATE_NAME);
+  }
   if (s) s.name = name.trim();
   save(d);
 }
@@ -271,6 +286,7 @@ export async function addProductsBulk(items: { name: string; price_cents: number
 export async function deleteProduct(id: number) {
   const d = load();
   d.products = d.products.filter((p) => p.id !== id);
+  if (d.frequencies) delete d.frequencies[id];
   save(d);
 }
 

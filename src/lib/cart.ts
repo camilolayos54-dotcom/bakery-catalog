@@ -7,8 +7,10 @@ export function hasPromo(p: Product) {
 /** Total in cents for `qty` units, applying the promo to every complete bundle. */
 export function lineTotal(p: Product, qty: number) {
   if (!hasPromo(p)) return p.price_cents * qty;
-  const bundles = Math.floor(qty / p.promo_qty!);
-  return bundles * p.promo_price_cents! + (qty % p.promo_qty!) * p.price_cents;
+  const size = p.promo_qty!;
+  // A "promotion" dearer than the normal price never overcharges the customer.
+  const bundlePrice = Math.min(p.promo_price_cents!, p.price_cents * size);
+  return Math.floor(qty / size) * bundlePrice + (qty % size) * p.price_cents;
 }
 
 export function lineSavings(p: Product, qty: number) {

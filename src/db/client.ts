@@ -47,6 +47,10 @@ export function getDb() {
         `);
       }
       return db;
+    }).catch((e) => {
+      // Do not cache a failed open: the next call (e.g. "Reintentar") must try again.
+      dbPromise = null;
+      throw e;
     });
   }
   return dbPromise;

@@ -1,3 +1,4 @@
+import { DUPLICATE_NAME, normalizeName } from '@/lib/names';
 import type { BackupPayload, Group, Product, Subcategory } from '@/types';
 import { getDb } from './client';
 import { INITIAL_CATALOG } from './initialData';
@@ -7,8 +8,11 @@ export async function listGroups(): Promise<Group[]> {
   return db.getAllAsync<Group>('SELECT * FROM groups ORDER BY sort_order, id');
 }
 
+/** Adds a group; if one with the same name already exists (ignoring case/accents) returns that one. */
 export async function addGroup(name: string): Promise<number> {
   const db = await getDb();
+  const same = (await listGroups()).find((g) => normalizeName(g.name) === normalizeName(name));
+  if (same) return same.id;
   const res = await db.runAsync(
     'INSERT INTO groups (name, sort_order) VALUES (?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM groups))',
     name.trim(),
@@ -18,6 +22,8 @@ export async function addGroup(name: string): Promise<number> {
 
 export async function renameGroup(id: number, name: string) {
   const db = await getDb();
+  const clash = (await listGroups()).find((g) => g.id !== id && normalizeName(g.name) === normalizeName(name));
+  if (clash) throw new Error(DUPLICATE_NAME);
   await db.runAsync('UPDATE groups SET name = ? WHERE id = ?', name.trim(), id);
 }
 
@@ -63,6 +69,8 @@ export async function listSubcategories(groupId?: number): Promise<Subcategory[]
 
 export async function addSubcategory(groupId: number, name: string): Promise<number> {
   const db = await getDb();
+  const same = (await listSubcategories(groupId)).find((s) => normalizeName(s.name) === normalizeName(name));
+  if (same) return same.id;
   const res = await db.runAsync(
     'INSERT INTO subcategories (group_id, name, sort_order) VALUES (?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM subcategories WHERE group_id = ?))',
     groupId,
@@ -74,6 +82,11 @@ export async function addSubcategory(groupId: number, name: string): Promise<num
 
 export async function renameSubcategory(id: number, name: string) {
   const db = await getDb();
+  const current = (await listSubcategories()).find((s) => s.id === id);
+  const clash = (await listSubcategories(current?.group_id)).find(
+    (s) => s.id !== id && normalizeName(s.name) === normalizeName(name),
+  );
+  if (clash) throw new Error(DUPLICATE_NAME);
   await db.runAsync('UPDATE subcategories SET name = ? WHERE id = ?', name.trim(), id);
 }
 
@@ -149,7 +162,10 @@ export async function addProductsBulk(items: { name: string; price_cents: number
 
 export async function deleteProduct(id: number) {
   const db = await getDb();
-  await db.runAsync('DELETE FROM products WHERE id = ?', id);
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM product_stats WHERE product_id = ?', id);
+    await db.runAsync('DELETE FROM products WHERE id = ?', id);
+  });
 }
 
 // Ventas frecuentes / Estadísticas
@@ -184,13 +200,26 @@ export async function getFrequentProductIds(limit = 30): Promise<{ product_id: n
   );
 }
 
-export async function seedInitialData(force = false) {
+/** One seeding at a time: two quick reloads on a fresh phone must not both insert the catalog. */
+let seeding: Promise<void> = Promise.resolve();
+
+export function seedInitialData(force = false): Promise<void> {
+  const run = seeding.then(
+    () => seedNow(force),
+    () => seedNow(force),
+  );
+  seeding = run.catch(() => undefined);
+  return run;
+}
+
+async function seedNow(force: boolean) {
   const db = await getDb();
   const currentProds = await listProducts();
   if (!force && currentProds.length > 0) return;
 
   await db.withTransactionAsync(async () => {
     if (force) {
+      await db.runAsync('DELETE FROM product_stats');
       await db.runAsync('DELETE FROM products');
       await db.runAsync('DELETE FROM subcategories');
       await db.runAsync('DELETE FROM groups');

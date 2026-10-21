@@ -31,7 +31,13 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="editor"
-        options={{ title: 'Editor', headerShown: false, tabBarIcon: () => <Text style={{ fontSize: 20 }}>✏️</Text> }}
+        options={{
+          title: 'Editor',
+          headerShown: false,
+          // Tocar "Editor" siempre abre la lista, no la última pantalla interna donde estabas.
+          popToTopOnBlur: true,
+          tabBarIcon: () => <Text style={{ fontSize: 20 }}>✏️</Text>,
+        }}
       />
     </Tabs>
   );

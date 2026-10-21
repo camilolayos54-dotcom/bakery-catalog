@@ -8,6 +8,8 @@ type State = {
   subcategories: Subcategory[];
   products: Product[];
   loaded: boolean;
+  /** Set when the catalog could not be read (so the UI can offer "Reintentar" instead of spinning forever). */
+  loadError: string | null;
   /** Running sum ("cuenta"): product id -> quantity. */
   cart: Record<number, number>;
   /** IDs de los productos más vendidos / frecuentes ordenados por frecuencia */
@@ -26,28 +28,35 @@ export const useStore = create<State>((set, get) => ({
   subcategories: [],
   products: [],
   loaded: false,
+  loadError: null,
   cart: {},
   frequentIds: [],
   reload: async () => {
-    await repo.seedInitialData(false);
-    const [groups, subcategories, products, stats] = await Promise.all([
-      repo.listGroups(),
-      repo.listSubcategories(),
-      repo.listProducts(),
-      repo.getFrequentProductIds(),
-    ]);
-    set((s) => {
-      const ids = new Set(products.map((p) => p.id));
-      const cart = Object.fromEntries(Object.entries(s.cart).filter(([id]) => ids.has(Number(id))));
-      return {
-        groups,
-        subcategories,
-        products,
-        loaded: true,
-        cart,
-        frequentIds: stats.map((x) => x.product_id),
-      };
-    });
+    try {
+      await repo.seedInitialData(false);
+      const [groups, subcategories, products, stats] = await Promise.all([
+        repo.listGroups(),
+        repo.listSubcategories(),
+        repo.listProducts(),
+        repo.getFrequentProductIds(),
+      ]);
+      set((s) => {
+        const ids = new Set(products.map((p) => p.id));
+        const cart = Object.fromEntries(Object.entries(s.cart).filter(([id]) => ids.has(Number(id))));
+        return {
+          groups,
+          subcategories,
+          products,
+          loaded: true,
+          loadError: null,
+          cart,
+          frequentIds: stats.map((x) => x.product_id),
+        };
+      });
+    } catch (e: any) {
+      set({ loadError: String(e?.message ?? e) });
+      throw e;
+    }
   },
   seedCatalog: async (force = false) => {
     await repo.seedInitialData(force);

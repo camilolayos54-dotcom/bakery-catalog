@@ -6,7 +6,7 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, Vi
 import * as repo from '@/db/repo';
 import { confirmDialog, notify } from '@/lib/dialog';
 import { pickCover, removeImage } from '@/lib/images';
-import { formatPrice, parsePrice } from '@/lib/money';
+import { formatPrice, isSellablePrice, parsePrice } from '@/lib/money';
 import { useStore } from '@/store';
 
 export default function ProductForm() {
@@ -90,20 +90,27 @@ export default function ProductForm() {
   async function save() {
     const cents = parsePrice(price);
     if (!name.trim()) return notify('Falta el nombre');
-    if (cents === null) return notify('Precio inválido');
+    if (!isSellablePrice(cents)) {
+      return notify('Precio inválido', 'Ingresa un precio mayor a cero (ej. 2500 o 2.500).');
+    }
     const pq = Math.floor(Number(promoQty));
     const pp = parsePrice(promoPrice);
     const wantsPromo = promoQty.trim() !== '' || promoPrice.trim() !== '';
-    if (wantsPromo && !(pq >= 2 && pp !== null)) {
-      return notify('Promoción incompleta', 'Indica cantidad (2 o más) y precio total, o deja ambos vacíos.');
+    if (wantsPromo && !(pq >= 2 && pq <= 1000 && isSellablePrice(pp))) {
+      return notify(
+        'Promoción incompleta',
+        'Indica cantidad (de 2 en adelante) y un precio total mayor a cero, o deja ambos vacíos.',
+      );
     }
+    // A subcategory only makes sense inside its own category.
+    const validSub = subcategories.some((s) => s.id === subcategoryId && s.group_id === groupId);
     await repo.saveProduct(
       {
         name,
         price_cents: cents,
         image_uri: image,
         group_id: groupId,
-        subcategory_id: subcategoryId,
+        subcategory_id: validSub ? subcategoryId : null,
         promo_qty: wantsPromo ? pq : null,
         promo_price_cents: wantsPromo ? pp : null,
       },

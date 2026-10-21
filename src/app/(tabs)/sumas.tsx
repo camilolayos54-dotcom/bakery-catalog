@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { computeBill } from '@/lib/bill';
 import { hasPromo, lineSavings, lineTotal, promoLabel } from '@/lib/cart';
 import { notify } from '@/lib/dialog';
-import { formatPrice, parsePrice } from '@/lib/money';
+import { formatPrice } from '@/lib/money';
 import { useStore } from '@/store';
 
 export default function Sumas() {
@@ -22,23 +23,14 @@ export default function Sumas() {
     [products, cart],
   );
 
-  const subtotal = lines.reduce((s, l) => s + l.total, 0);
-  const promoSaved = lines.reduce((s, l) => s + l.saved, 0);
-  const units = lines.reduce((s, l) => s + l.qty, 0);
-
-  const discNum = Number(discount.replace(',', '.'));
-  const discountCents = !discount.trim() || !Number.isFinite(discNum) || discNum < 0
-    ? 0
-    : discountPct
-      ? Math.round(subtotal * Math.min(discNum, 100) / 100)
-      : Math.min(subtotal, parsePrice(discount) ?? 0);
-  const extraCents = parsePrice(extra) ?? 0;
-  const total = Math.max(0, subtotal - discountCents + extraCents);
-
-  const n = Math.floor(Number(people));
-  const perPerson = n >= 2 ? Math.round(total / n) : null;
-  const receivedCents = parsePrice(received);
-  const change = receivedCents != null ? receivedCents - total : null;
+  const { units, subtotal, promoSaved, discountCents, extraCents, total, perPerson, change } = computeBill({
+    lines: lines.map((l) => ({ product: l.p, qty: l.qty })),
+    discountText: discount,
+    discountIsPercent: discountPct,
+    extraText: extra,
+    peopleText: people,
+    receivedText: received,
+  });
 
   async function handleFinishSale() {
     if (lines.length === 0) return;

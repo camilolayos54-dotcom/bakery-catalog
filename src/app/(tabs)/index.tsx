@@ -21,7 +21,7 @@ import * as repo from '@/db/repo';
 import { hasPromo } from '@/lib/cart';
 import { notify } from '@/lib/dialog';
 import { pickCover } from '@/lib/images';
-import { formatPrice, parsePrice } from '@/lib/money';
+import { formatPrice, isSellablePrice, parsePrice } from '@/lib/money';
 import { useStore } from '@/store';
 
 const PAD = 8;
@@ -38,6 +38,7 @@ export default function Catalog() {
     subcategories,
     products,
     loaded,
+    loadError,
     cart,
     frequentIds,
     addToCart,
@@ -60,6 +61,11 @@ export default function Catalog() {
 
   // Cantidad de productos con promociones
   const promoCount = useMemo(() => products.filter((p) => hasPromo(p)).length, [products]);
+  // Solo cuentan los frecuentes que todavía existen en el catálogo
+  const frequentCount = useMemo(() => {
+    const ids = new Set(products.map((p) => p.id));
+    return frequentIds.filter((id) => ids.has(id)).length;
+  }, [products, frequentIds]);
 
   // Subcategorías de la categoría seleccionada en catálogo
   const activeSubcategories = useMemo(() => {
@@ -111,8 +117,8 @@ export default function Catalog() {
     if (!quickName.trim()) {
       return notify('Falta el nombre', 'Ingresa el nombre del producto.');
     }
-    if (cents === null || cents <= 0) {
-      return notify('Precio inválido', 'Ingresa un precio válido (ej. 2500 o 2.500).');
+    if (!isSellablePrice(cents)) {
+      return notify('Precio inválido', 'Ingresa un precio mayor a cero (ej. 2500 o 2.500).');
     }
 
     await repo.saveProduct({
@@ -183,7 +189,7 @@ export default function Catalog() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           <Chip label="Todos" active={groupId === null} onPress={() => handleSelectGroup(null)} />
           <Chip
-            label={`⭐ Frecuentes${frequentIds.length > 0 ? ` (${frequentIds.length})` : ''}`}
+            label={`⭐ Frecuentes${frequentCount > 0 ? ` (${frequentCount})` : ''}`}
             active={groupId === 'frecuentes'}
             onPress={() => handleSelectGroup('frecuentes')}
           />
@@ -254,8 +260,16 @@ export default function Catalog() {
         }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            {loadError && !loaded ? (
+              <>
+                <Text style={styles.empty}>No se pudo cargar el catálogo.{'\n'}{loadError}</Text>
+                <Pressable style={styles.retryBtn} onPress={() => void reload().catch(() => undefined)}>
+                  <Text style={styles.retryText}>Reintentar</Text>
+                </Pressable>
+              </>
+            ) : null}
             <Text style={styles.empty}>
-              {loaded
+              {loadError && !loaded ? '' : loaded
                 ? groupId === 'frecuentes'
                   ? 'Aún no hay productos frecuentes.\nSe guardan automáticamente cada vez que toques "Finalizar cuenta" en la pestaña Sumas.'
                   : groupId === 'promociones'
@@ -493,6 +507,8 @@ const styles = StyleSheet.create({
   grid: { padding: PAD, paddingBottom: 110 },
   emptyContainer: { alignItems: 'center', marginTop: 60, paddingHorizontal: 30 },
   empty: { textAlign: 'center', color: '#8a7a68', fontSize: 15 },
+  retryBtn: { marginTop: 14, backgroundColor: '#b3541e', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12 },
+  retryText: { color: '#fff', fontWeight: '800', fontSize: 15 },
 
   /* Floating Action Button (FAB) */
   fab: {
