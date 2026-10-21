@@ -44,3 +44,6 @@ example
 .claude/
 @Milo_Lian.zip
 chat_data/
+
+# APKs compilados
+*.apk

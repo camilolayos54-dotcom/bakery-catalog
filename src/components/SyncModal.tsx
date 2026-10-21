@@ -4,13 +4,17 @@ import {
   Alert,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 
+import { confirmDialog } from '@/lib/dialog';
 import { exportAndShareData, getSyncDirectoryPath, importDataFromFile } from '@/lib/sync';
+import { isVaultSupported } from '@/lib/vault/fs';
+import { linkVault, reconnectVault, syncNow, unlinkVault, useVault } from '@/lib/vault/sync';
 import { useStore } from '@/store';
 
 type Props = {
@@ -24,6 +28,19 @@ export function SyncModal({ visible, onClose }: Props) {
   const [isError, setIsError] = useState(false);
   const products = useStore((s) => s.products);
   const groups = useStore((s) => s.groups);
+  const vault = useVault();
+
+  const handleLinkExisting = async () => {
+    if (products.length > 0) {
+      const ok = await confirmDialog(
+        'Elegir carpeta existente',
+        'Se cargarán los productos de esa carpeta y REEMPLAZARÁN los actuales de la app (se guarda una copia de seguridad). ¿Continuar?',
+        'Continuar',
+      );
+      if (!ok) return;
+    }
+    await linkVault('existing');
+  };
 
   const handleExport = async () => {
     setLoading(true);
@@ -67,6 +84,7 @@ export function SyncModal({ visible, onClose }: Props) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.container}>
+          <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <Text style={styles.title}>🔄 Sincronización y Respaldo</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -83,6 +101,59 @@ export function SyncModal({ visible, onClose }: Props) {
               📦 Datos actuales: <Text style={styles.bold}>{products.length} productos</Text> en{' '}
               <Text style={styles.bold}>{groups.length} categorías</Text>
             </Text>
+          </View>
+
+          <View style={styles.vaultBox}>
+            <Text style={styles.vaultTitle}>📁 Carpeta Bakery (como Obsidian)</Text>
+            {!isVaultSupported() ? (
+              <Text style={styles.vaultText}>
+                Para usar una carpeta en el PC abre la app en Chrome o Edge. En el celular funciona directamente.
+              </Text>
+            ) : vault.linked ? (
+              <>
+                <Text style={styles.vaultText}>
+                  Vinculada: <Text style={styles.bold}>{vault.name}</Text>
+                  {'\n'}Lo que cambies en la app se guarda en la carpeta, y lo que edites en los archivos se
+                  carga al abrir la app o al pulsar Sincronizar.
+                </Text>
+                {vault.needsPermission ? (
+                  <TouchableOpacity style={[styles.vaultBtn, styles.vaultBtnPrimary]} onPress={() => void reconnectVault()}>
+                    <Text style={styles.vaultBtnTextPrimary}>Permitir acceso a la carpeta</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.vaultRow}>
+                    <TouchableOpacity
+                      style={[styles.vaultBtn, styles.vaultBtnPrimary, { flex: 2 }]}
+                      onPress={() => void syncNow()}
+                      disabled={vault.busy}
+                    >
+                      <Text style={styles.vaultBtnTextPrimary}>{vault.busy ? 'Sincronizando…' : '🔄 Sincronizar ahora'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.vaultBtn} onPress={() => void unlinkVault()} disabled={vault.busy}>
+                      <Text style={styles.vaultBtnText}>Desvincular</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={styles.vaultText}>
+                  Una carpeta con un archivo .md por producto (precio, promoción y foto). Puedes editarla desde el PC
+                  o con Obsidian y la app la carga sola.
+                </Text>
+                <View style={styles.vaultRow}>
+                  <TouchableOpacity style={[styles.vaultBtn, styles.vaultBtnPrimary]} onPress={() => void linkVault('create')}>
+                    <Text style={styles.vaultBtnTextPrimary}>Crear carpeta Bakery</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.vaultBtn} onPress={() => void handleLinkExisting()}>
+                    <Text style={styles.vaultBtnText}>Elegir existente</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+            {vault.message ? (
+              <Text style={[styles.vaultMsg, vault.error && { color: '#991b1b' }]}>{vault.message}</Text>
+            ) : null}
           </View>
 
           <View style={styles.actions}>
@@ -149,6 +220,7 @@ export function SyncModal({ visible, onClose }: Props) {
           <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
             <Text style={styles.doneBtnText}>Cerrar</Text>
           </TouchableOpacity>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -169,6 +241,7 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '100%',
     maxWidth: 480,
+    maxHeight: '94%',
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 10,
@@ -216,6 +289,30 @@ const styles = StyleSheet.create({
   bold: {
     fontWeight: '700',
   },
+  vaultBox: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1.5,
+    borderColor: '#fcd34d',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+    gap: 8,
+  },
+  vaultTitle: { fontSize: 15, fontWeight: '800', color: '#78350f' },
+  vaultText: { fontSize: 12, color: '#78350f', lineHeight: 17 },
+  vaultRow: { flexDirection: 'row', gap: 8 },
+  vaultBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: '#fde68a',
+    alignItems: 'center',
+  },
+  vaultBtnPrimary: { backgroundColor: '#b45309' },
+  vaultBtnText: { fontWeight: '700', color: '#78350f', fontSize: 13 },
+  vaultBtnTextPrimary: { fontWeight: '800', color: '#ffffff', fontSize: 13 },
+  vaultMsg: { fontSize: 12, color: '#166534', fontWeight: '600' },
   actions: {
     gap: 12,
   },
