@@ -5,32 +5,43 @@ import { hasPromo, promoLabel } from '@/lib/cart';
 import { formatPrice } from '@/lib/money';
 import type { Product } from '@/types';
 
+/** How long to hold a card to start moving it. */
+export const MOVE_HOLD_MS = 2000;
+
 type Props = {
   product: Product;
   width: number;
   qty: number;
+  /** This is the product being moved. */
+  moving?: boolean;
+  /** Some product is being moved: cards become drop targets instead of "add to bill" buttons. */
+  moveMode?: boolean;
   onIncrement: () => void;
   onDecrement: () => void;
   onEdit: () => void;
+  onStartMove: () => void;
 };
 
 export function ProductCard({
   product,
   width,
   qty,
+  moving,
+  moveMode,
   onIncrement,
   onDecrement,
   onEdit,
+  onStartMove,
 }: Props) {
   const inCart = qty > 0;
 
   return (
     <View style={{ width, padding: 5 }}>
       <Pressable
-        style={[styles.card, inCart && styles.selected]}
+        style={[styles.card, inCart && styles.selected, moving && styles.moving]}
         onPress={onIncrement}
-        onLongPress={onEdit}
-        delayLongPress={1800}
+        onLongPress={onStartMove}
+        delayLongPress={MOVE_HOLD_MS}
       >
         <View style={styles.imageContainer}>
           {product.image_uri ? (
@@ -41,7 +52,11 @@ export function ProductCard({
             </View>
           )}
 
-          {inCart ? (
+          {moving ? (
+            <View style={styles.movingTag}>
+              <Text style={styles.movingTagText}>↕ Moviendo</Text>
+            </View>
+          ) : inCart ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>×{qty}</Text>
             </View>
@@ -52,6 +67,21 @@ export function ProductCard({
               <Text style={styles.promoText}>{promoLabel(product, formatPrice)}</Text>
             </View>
           ) : null}
+
+          {/* Quick edit */}
+          {!moveMode ? (
+            <Pressable
+              style={styles.editBtn}
+              onPress={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              hitSlop={8}
+              accessibilityLabel={`Editar ${product.name}`}
+            >
+              <Text style={styles.editBtnText}>✎</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <View style={styles.info}>
@@ -60,9 +90,12 @@ export function ProductCard({
           </Text>
           <Text style={styles.price}>{formatPrice(product.price_cents)}</Text>
 
-          {/* Stepper buttons (+ y -) */}
           <View style={styles.actionRow}>
-            {inCart ? (
+            {moveMode ? (
+              <View style={styles.dropHint}>
+                <Text style={styles.dropHintText}>{moving ? 'Elige dónde ponerlo' : 'Toca para poner aquí'}</Text>
+              </View>
+            ) : inCart ? (
               <View style={styles.stepperWrap}>
                 <Pressable
                   style={styles.stepBtnMinus}
@@ -121,6 +154,11 @@ const styles = StyleSheet.create({
     borderColor: '#b3541e',
     backgroundColor: '#fff9f2',
   },
+  moving: {
+    borderColor: '#1565c0',
+    backgroundColor: '#eef5ff',
+    elevation: 6,
+  },
   imageContainer: {
     width: '100%',
     aspectRatio: 1,
@@ -154,6 +192,41 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '800',
     fontSize: 12,
+  },
+  movingTag: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    paddingHorizontal: 8,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1565c0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  movingTagText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 11,
+  },
+  editBtn: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderWidth: 1,
+    borderColor: '#e2cfb7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editBtnText: {
+    fontSize: 15,
+    color: '#8a4b14',
+    fontWeight: '800',
+    marginTop: -1,
   },
   promo: {
     position: 'absolute',
@@ -189,6 +262,18 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     marginTop: 2,
+  },
+  dropHint: {
+    backgroundColor: '#e3eefb',
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropHintText: {
+    color: '#1565c0',
+    fontWeight: '700',
+    fontSize: 11,
   },
   addBtn: {
     backgroundColor: '#f2dfca',

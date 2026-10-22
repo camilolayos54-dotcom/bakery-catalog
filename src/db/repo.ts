@@ -1,6 +1,7 @@
 import { DUPLICATE_NAME, normalizeName } from '@/lib/names';
+import { alphabeticalOrder, assignOrder } from '@/lib/order';
 import type { BackupPayload, Group, Product, Subcategory } from '@/types';
-import { getDb } from './client';
+import { getDb, RENUMBER_PRODUCTS_ALPHABETICALLY } from './client';
 import { INITIAL_CATALOG } from './initialData';
 
 export async function listGroups(): Promise<Group[]> {
@@ -98,7 +99,26 @@ export async function deleteSubcategory(id: number) {
 // Products
 export async function listProducts(): Promise<Product[]> {
   const db = await getDb();
-  return db.getAllAsync<Product>('SELECT * FROM products ORDER BY name COLLATE NOCASE');
+  return db.getAllAsync<Product>('SELECT * FROM products ORDER BY sort_order, name COLLATE NOCASE, id');
+}
+
+/**
+ * Applies a hand-made order. `orderedIds` is the desired order of (some) products; they swap
+ * the positions they already hold, so products not in the list do not move relative to each other.
+ */
+export async function reorderProducts(orderedIds: number[]) {
+  if (orderedIds.length < 2) return;
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    const marks = orderedIds.map(() => '?').join(',');
+    const rows = await db.getAllAsync<{ id: number; sort_order: number }>(
+      `SELECT id, sort_order FROM products WHERE id IN (${marks})`,
+      ...orderedIds,
+    );
+    for (const [id, value] of assignOrder(orderedIds, rows)) {
+      await db.runAsync('UPDATE products SET sort_order = ? WHERE id = ?', value, id);
+    }
+  });
 }
 
 export async function getProduct(id: number): Promise<Product | null> {
@@ -127,7 +147,7 @@ export async function saveProduct(input: ProductInput, id?: number) {
     );
   } else {
     await db.runAsync(
-      'INSERT INTO products (name, price_cents, image_uri, group_id, subcategory_id, promo_qty, promo_price_cents, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO products (name, price_cents, image_uri, group_id, subcategory_id, promo_qty, promo_price_cents, created_at, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM products))',
       input.name.trim(),
       input.price_cents,
       input.image_uri,
@@ -150,7 +170,7 @@ export async function addProductsBulk(items: { name: string; price_cents: number
   await db.withTransactionAsync(async () => {
     for (const it of items) {
       await db.runAsync(
-        'INSERT INTO products (name, price_cents, image_uri, group_id, subcategory_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)',
+        'INSERT INTO products (name, price_cents, image_uri, group_id, subcategory_id, created_at, sort_order) VALUES (?, ?, NULL, ?, NULL, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM products))',
         it.name.trim(),
         it.price_cents,
         groupId,
@@ -260,6 +280,8 @@ async function seedNow(force: boolean) {
         );
       }
     }
+    // Initial order: alphabetical (the order users already see).
+    await db.execAsync(RENUMBER_PRODUCTS_ALPHABETICALLY);
   });
 }
 
@@ -313,9 +335,11 @@ export async function importAllData(payload: BackupPayload): Promise<void> {
       );
     }
 
+    // Backups made before custom order existed have no sort_order: keep the order they were exported in.
+    const fallback = alphabeticalOrder(payload.products);
     for (const p of payload.products) {
       await db.runAsync(
-        'INSERT INTO products (id, name, price_cents, image_uri, group_id, subcategory_id, promo_qty, promo_price_cents, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO products (id, name, price_cents, image_uri, group_id, subcategory_id, promo_qty, promo_price_cents, created_at, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         p.id,
         p.name,
         p.price_cents,
@@ -325,6 +349,7 @@ export async function importAllData(payload: BackupPayload): Promise<void> {
         p.promo_qty ?? null,
         p.promo_price_cents ?? null,
         p.created_at || Date.now(),
+        p.sort_order ?? fallback.get(p.id) ?? 0,
       );
     }
 

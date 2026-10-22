@@ -2,6 +2,7 @@ import {
   mergeFrontmatter,
   modelFromVault,
   parseFrontmatter,
+  parseProductText,
   planExport,
   safeName,
   signatureOfApp,
@@ -43,10 +44,10 @@ const data: ExportInput = {
     { id: 11, group_id: 2, name: 'Sin productos' }, // subcategoría vacía
   ],
   products: [
-    { id: 1, name: 'Pan de bono', price_cents: 250000, image_uri: 'file:///x/a.jpg', group_id: 1, subcategory_id: null, promo_qty: 3, promo_price_cents: 600000 },
-    { id: 2, name: 'Croissant', price_cents: 400000, image_uri: null, group_id: 1, subcategory_id: 10, promo_qty: null, promo_price_cents: null },
-    { id: 3, name: 'Almojábana', price_cents: 200050, image_uri: 'data:image/png;base64,AAAA', group_id: 2, subcategory_id: null, promo_qty: null, promo_price_cents: null },
-    { id: 4, name: 'Suelto', price_cents: 100000, image_uri: null, group_id: null, subcategory_id: null, promo_qty: null, promo_price_cents: null },
+    { id: 1, name: 'Pan de bono', price_cents: 250000, image_uri: 'file:///x/a.jpg', group_id: 1, subcategory_id: null, promo_qty: 3, promo_price_cents: 600000, sort_order: 30 },
+    { id: 2, name: 'Croissant', price_cents: 400000, image_uri: null, group_id: 1, subcategory_id: 10, promo_qty: null, promo_price_cents: null, sort_order: 10 },
+    { id: 3, name: 'Almojábana', price_cents: 200050, image_uri: 'data:image/png;base64,AAAA', group_id: 2, subcategory_id: null, promo_qty: null, promo_price_cents: null, sort_order: 40 },
+    { id: 4, name: 'Suelto', price_cents: 100000, image_uri: null, group_id: null, subcategory_id: null, promo_qty: null, promo_price_cents: null, sort_order: 20 },
   ],
 };
 const plan = planExport(data);
@@ -73,6 +74,25 @@ assert(signatureOfModel(model) === signatureOfApp(data), 'firma carpeta == firma
 const bono = model.products.find((p) => p.name === 'Pan de bono')!;
 assert(bono.promo_qty === 3 && bono.promo_price_cents === 600000, 'promoción recuperada');
 assert(bono.imagePath?.join('/') === 'Panes/Pan de bono.jpg', 'portada asociada al producto');
+
+// 3b. Orden personalizado
+assert((vault.get('Panes/Pan de bono.md') ?? '').includes('orden: 30'), 'el orden queda guardado en el encabezado (orden: 30)');
+assert(model.products.find((p) => p.name === 'Croissant')!.sort_order === 10, 'el orden se lee de vuelta del archivo');
+const byOrder = [...model.products].sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity)).map((p) => p.name);
+assert(byOrder.join(',') === 'Croissant,Suelto,Pan de bono,Almojábana', 'los productos se ordenan por "orden", no por nombre');
+// los números con huecos (10,20,30,40 vs 1,2,3,4) no son una diferencia
+const renumbered: ExportInput = { ...data, products: data.products.map((p, i) => ({ ...p, sort_order: [3, 1, 4, 2][i] })) };
+assert(signatureOfApp(renumbered) === signatureOfModel(model), 'mismos productos en el mismo orden con otros números = sin diferencias');
+// mover un producto SÍ es una diferencia
+const moved: ExportInput = { ...data, products: data.products.map((p) => (p.id === 4 ? { ...p, sort_order: 5 } : p)) };
+assert(signatureOfApp(moved) !== signatureOfModel(model), 'mover un producto en la app se detecta como diferencia');
+// una nota sin "orden" (creada a mano) queda al final, por nombre
+const withNew = new Map(vault);
+withNew.set('Panes/Brownie.md', '---\nprecio: 3500\n---\n');
+const modelNew = await modelFromVault([...withNew.keys()].map((k) => k.split('/')), async (p) => withNew.get(p.join('/')) ?? '');
+const lastTwo = [...modelNew.products].sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity) || a.name.localeCompare(b.name, 'es')).map((p) => p.name).slice(-1);
+assert(lastTwo[0] === 'Brownie', 'una nota nueva sin "orden" queda al final');
+assert(parseProductText('---\norden: abc\n---').order === null && parseProductText('---\norden: 7\n---').order === 7, '"orden" inválido se ignora');
 
 // 4. Editar "como en Obsidian": cambiar precio a mano en el PC
 vault.set('Panes/Tradicionales/Croissant.md', '---\nprecio: 4.500\n---\nMi nota personal');
@@ -109,8 +129,8 @@ const dup = planExport({
   groups: [{ id: 1, name: 'A' }],
   subcategories: [],
   products: [
-    { id: 1, name: 'Pan', price_cents: 100, image_uri: null, group_id: 1, subcategory_id: null, promo_qty: null, promo_price_cents: null },
-    { id: 2, name: 'pan', price_cents: 200, image_uri: null, group_id: 1, subcategory_id: null, promo_qty: null, promo_price_cents: null },
+    { id: 1, name: 'Pan', price_cents: 100, image_uri: null, group_id: 1, subcategory_id: null, promo_qty: null, promo_price_cents: null, sort_order: 1 },
+    { id: 2, name: 'pan', price_cents: 200, image_uri: null, group_id: 1, subcategory_id: null, promo_qty: null, promo_price_cents: null, sort_order: 2 },
   ],
 });
 const names = dup.files.map((f) => f.path.join('/'));

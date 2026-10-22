@@ -28,7 +28,7 @@ const panCrema: Product = {
   image_uri: null,
   group_id: 1,
   subcategory_id: null,
-  created_at: 0,
+  created_at: 0, sort_order: 0,
   promo_qty: null,
   promo_price_cents: null,
 };
@@ -47,7 +47,7 @@ const palitroquesReal: Product = {
   image_uri: null,
   group_id: 1,
   subcategory_id: null,
-  created_at: 0,
+  created_at: 0, sort_order: 0,
   promo_qty: 4,
   promo_price_cents: 200000, // 4 por $2.000
 };
@@ -67,7 +67,7 @@ const panAgridulce: Product = {
   image_uri: null,
   group_id: 1,
   subcategory_id: null,
-  created_at: 0,
+  created_at: 0, sort_order: 0,
   promo_qty: 3,
   promo_price_cents: 250000, // 3 por $2.500
 };
@@ -84,7 +84,7 @@ const panChino: Product = {
   image_uri: null,
   group_id: 1,
   subcategory_id: null,
-  created_at: 0,
+  created_at: 0, sort_order: 0,
   promo_qty: null,
   promo_price_cents: null,
 };
@@ -98,7 +98,7 @@ const almojabana: Product = {
   image_uri: null,
   group_id: 1,
   subcategory_id: null,
-  created_at: 0,
+  created_at: 0, sort_order: 0,
   promo_qty: 4,
   promo_price_cents: 500000, // 4 por $5.000
 };
@@ -106,9 +106,9 @@ assert(lineTotal(almojabana, 4) === 500000, '4 Almojábanas combo = $5.000');
 assert(lineSavings(almojabana, 4) === 20000, 'Ahorro 4 Almojábanas = $200 ($5.200 vs $5.000)');
 
 // E) Cigarrillos: Marlboro ($1.000), Star Lite ($800), Mentolados ($1.200)
-const marlboro: Product = { id: 6, name: 'Cigarrillo Marlboro', price_cents: 100000, image_uri: null, group_id: 8, subcategory_id: null, created_at: 0, promo_qty: null, promo_price_cents: null };
-const starLite: Product = { id: 7, name: 'Cigarrillo Star Lite', price_cents: 80000, image_uri: null, group_id: 8, subcategory_id: null, created_at: 0, promo_qty: null, promo_price_cents: null };
-const mentolado: Product = { id: 8, name: 'Cigarrillo Mentolado', price_cents: 120000, image_uri: null, group_id: 8, subcategory_id: null, created_at: 0, promo_qty: null, promo_price_cents: null };
+const marlboro: Product = { id: 6, name: 'Cigarrillo Marlboro', price_cents: 100000, image_uri: null, group_id: 8, subcategory_id: null, created_at: 0, sort_order: 0, promo_qty: null, promo_price_cents: null };
+const starLite: Product = { id: 7, name: 'Cigarrillo Star Lite', price_cents: 80000, image_uri: null, group_id: 8, subcategory_id: null, created_at: 0, sort_order: 0, promo_qty: null, promo_price_cents: null };
+const mentolado: Product = { id: 8, name: 'Cigarrillo Mentolado', price_cents: 120000, image_uri: null, group_id: 8, subcategory_id: null, created_at: 0, sort_order: 0, promo_qty: null, promo_price_cents: null };
 assert(lineTotal(marlboro, 2) === 200000, '2 Marlboro = $2.000');
 assert(lineTotal(starLite, 3) === 240000, '3 Star Lite = $2.400');
 assert(lineTotal(mentolado, 2) === 240000, '2 Mentolados = $2.400');
@@ -121,7 +121,7 @@ const croissantPromo: Product = {
   image_uri: null,
   group_id: 1,
   subcategory_id: null,
-  created_at: 0,
+  created_at: 0, sort_order: 0,
   promo_qty: 3,
   promo_price_cents: 1000000, // $10.000
 };

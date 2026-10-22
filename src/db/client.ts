@@ -2,6 +2,15 @@ import * as SQLite from 'expo-sqlite';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
+/** Sets products.sort_order = alphabetical position (1..n). */
+export const RENUMBER_PRODUCTS_ALPHABETICALLY = `
+  UPDATE products SET sort_order = (
+    SELECT COUNT(*) FROM products p2
+    WHERE p2.name COLLATE NOCASE < products.name COLLATE NOCASE
+       OR (p2.name COLLATE NOCASE = products.name COLLATE NOCASE AND p2.id < products.id)
+  ) + 1;
+`;
+
 export function getDb() {
   if (!dbPromise) {
     dbPromise = SQLite.openDatabaseAsync('bakery.db').then(async (db) => {
@@ -45,6 +54,11 @@ export function getDb() {
         await db.execAsync(`
           ALTER TABLE products ADD COLUMN subcategory_id INTEGER REFERENCES subcategories(id) ON DELETE SET NULL;
         `);
+      }
+      if (!cols.some((c) => c.name === 'sort_order')) {
+        // First time with custom order: start from the alphabetical order users already see.
+        await db.execAsync('ALTER TABLE products ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;');
+        await db.execAsync(RENUMBER_PRODUCTS_ALPHABETICALLY);
       }
       return db;
     }).catch((e) => {

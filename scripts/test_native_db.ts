@@ -211,6 +211,82 @@ async function main() {
     ok(second === null && (await repo.listProducts()).length === 113, 'el segundo intento funciona (el fallo no queda guardado)');
   }
 
+  // 8. Orden personalizado de productos
+  {
+    // 8a. Bases viejas (sin sort_order) empiezan en orden alfabético
+    const f = tmp('order-legacy');
+    cleanup.push(f);
+    const old = new DatabaseSync(f);
+    old.exec(`
+      CREATE TABLE groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE products (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, price_cents INTEGER NOT NULL DEFAULT 0,
+        image_uri TEXT, group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL, created_at INTEGER NOT NULL);
+      INSERT INTO products (name, price_cents, created_at) VALUES ('pera', 100, 1), ('Banano', 100, 2), ('manzana', 100, 3), ('Anís', 100, 4);
+    `);
+    old.close();
+    const legacy = boot(f);
+    const lp = await legacy.repo.listProducts();
+    ok(lp.map((p) => p.name).join(',') === 'Anís,Banano,manzana,pera', 'migración: los productos viejos quedan en orden alfabético');
+    ok(lp.map((p) => p.sort_order).join(',') === '1,2,3,4', 'migración: reciben posiciones 1..n');
+
+    // 8b. Arranque nuevo: alfabético y posiciones únicas
+    const g = tmp('order-fresh');
+    cleanup.push(g);
+    const { repo } = boot(g);
+    await repo.seedInitialData(false);
+    const all = await repo.listProducts();
+    const orders = all.map((p) => p.sort_order);
+    ok(new Set(orders).size === 113 && orders[0] === 1 && orders[112] === 113, 'catálogo inicial: 113 posiciones únicas (1..113)');
+    const sortedByName = all.slice().sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase(), 'es'));
+    ok(all[0].name.toLowerCase().localeCompare(sortedByName[0].name.toLowerCase(), 'es') === 0, 'catálogo inicial: empieza por el primero alfabético');
+
+    // 8c. Mover productos de una lista filtrada
+    const group = (await repo.listGroups())[0];
+    const inGroup = all.filter((p) => p.group_id === group.id);
+    const ids = inGroup.map((p) => p.id);
+    const moved = ids.slice();
+    const last = moved.pop()!;
+    moved.unshift(last); // el último pasa a primero
+    await repo.reorderProducts(moved);
+    const after = await repo.listProducts();
+    const afterGroup = after.filter((p) => p.group_id === group.id).map((p) => p.id);
+    ok(afterGroup.join(',') === moved.join(','), 'mover el último de una categoría al inicio funciona');
+    const others = (l: typeof all) => l.filter((p) => p.group_id !== group.id).map((p) => p.id).join(',');
+    ok(others(after) === others(all), 'los productos de otras categorías no se movieron');
+    ok(new Set(after.map((p) => p.sort_order)).size === 113, 'las posiciones siguen siendo únicas');
+    ok((await repo.listProducts()).map((p) => p.id).join(',') === after.map((p) => p.id).join(','), 'el orden se conserva al volver a leer');
+
+    // 8d. Productos nuevos van al final, en el orden en que se agregan
+    await repo.saveProduct({ name: 'AAA primero?', price_cents: 100, image_uri: null, group_id: null, subcategory_id: null, promo_qty: null, promo_price_cents: null });
+    await repo.addProductsBulk([{ name: 'AAA bulk 1', price_cents: 100 }, { name: 'AAA bulk 2', price_cents: 100 }], null);
+    const tail = (await repo.listProducts()).slice(-3).map((p) => p.name);
+    ok(tail.join('|') === 'AAA primero?|AAA bulk 1|AAA bulk 2', 'productos nuevos quedan al final (aunque su nombre sea "AAA…")');
+
+    // 8e. Cambiar categoría no pierde el lugar ni rompe nada
+    const mover = after.find((p) => p.group_id === group.id)!;
+    const otherGroup = (await repo.listGroups())[1];
+    await repo.moveProductGroup(mover.id, otherGroup.id, null);
+    const m = await repo.getProduct(mover.id);
+    ok(m!.group_id === otherGroup.id && m!.sort_order === mover.sort_order, 'cambiar de categoría conserva su posición');
+
+    // 8f. Respaldo viejo (sin sort_order) se importa alfabético; uno nuevo conserva el orden
+    const dump = await repo.exportAllData();
+    const h = tmp('order-import');
+    cleanup.push(h);
+    const other = boot(h);
+    await other.repo.seedInitialData(false);
+    await other.repo.importAllData(dump);
+    ok((await other.repo.listProducts()).map((p) => p.id).join(',') === (await repo.listProducts()).map((p) => p.id).join(','), 'exportar e importar conserva el orden personalizado');
+    const oldDump = JSON.parse(JSON.stringify(dump));
+    oldDump.products.forEach((p: any) => delete p.sort_order);
+    await other.repo.importAllData(oldDump);
+    const imported = await other.repo.listProducts();
+    ok(imported.length === dump.products.length && new Set(imported.map((p) => p.sort_order)).size === imported.length, 'un respaldo antiguo (sin orden) se importa con posiciones únicas');
+
+    // 8g. Reordenar con 0 o 1 producto no hace nada ni falla
+    ok((await throws(() => repo.reorderProducts([]))) === null && (await throws(() => repo.reorderProducts([mover.id]))) === null, 'reordenar una lista vacía o de un producto no falla');
+  }
+
   // Windows keeps the files locked while this process is alive; leftovers are removed on the next run.
   for (const f of cleanup) for (const x of [f, `${f}-wal`, `${f}-shm`]) {
     try {

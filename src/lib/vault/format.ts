@@ -23,6 +23,8 @@ export type VaultProduct = {
   price_cents: number;
   promo_qty: number | null;
   promo_price_cents: number | null;
+  /** Hand-made order from the `orden:` line, if the note has one. */
+  sort_order: number | null;
   /** Path of the .md file. */
   path: string[];
   /** Path of the cover image, if any. */
@@ -49,6 +51,7 @@ export type ExportInput = {
     subcategory_id: number | null;
     promo_qty: number | null;
     promo_price_cents: number | null;
+    sort_order: number;
   }[];
 };
 
@@ -142,11 +145,13 @@ export function serializeProduct(p: {
   promo_qty: number | null;
   promo_price_cents: number | null;
   imageName: string | null;
+  order?: number | null;
 }): string {
   const lines = ['---', `precio: ${pesos(p.price_cents)}`];
   if (p.promo_qty && p.promo_qty > 1 && p.promo_price_cents != null) {
     lines.push(`promo_cantidad: ${p.promo_qty}`, `promo_precio: ${pesos(p.promo_price_cents)}`);
   }
+  if (p.order != null) lines.push(`orden: ${p.order}`);
   if (p.imageName) lines.push(`imagen: ${p.imageName}`);
   lines.push('---', '');
   return lines.join('\n');
@@ -159,7 +164,10 @@ export function parseProductText(text: string) {
   const promoPriceRaw = pick(fm, 'promo_precio', 'promo_price', 'promocion_precio');
   const promoPrice = promoPriceRaw != null ? parsePrice(promoPriceRaw) : null;
   const hasPromo = promoQty >= 2 && promoPrice != null;
+  const orderRaw = pick(fm, 'orden', 'order');
+  const order = orderRaw != null && /^-?\d+$/.test(orderRaw.trim()) ? Number(orderRaw.trim()) : null;
   return {
+    order,
     price_cents: (price != null ? parsePrice(price) : null) ?? 0,
     promo_qty: hasPromo ? promoQty : null,
     promo_price_cents: hasPromo ? promoPrice : null,
@@ -219,6 +227,7 @@ export async function modelFromVault(
       price_cents: parsed.price_cents,
       promo_qty: parsed.promo_qty,
       promo_price_cents: parsed.promo_price_cents,
+      sort_order: parsed.order,
       path,
       imagePath,
     });
@@ -296,6 +305,7 @@ export function planExport(data: ExportInput): ExportPlan {
         promo_qty: p.promo_qty,
         promo_price_cents: p.promo_price_cents,
         imageName,
+        order: p.sort_order,
       }),
     });
   }
@@ -340,9 +350,12 @@ const README_TEXT = [
   'precio: 2500',
   'promo_cantidad: 3',
   'promo_precio: 6000',
+  'orden: 12',
   '---',
   'Aquí puedes escribir tus notas libremente.',
   '```',
+  '',
+  '`orden` es la posición del producto en el catálogo (menor = primero). La app lo actualiza cuando mueves productos.',
   '',
   'Los archivos que empiezan por _ o . se ignoran. Las notas debajo del encabezado no se tocan.',
   'Para traer tus cambios a la app: ábrela, o pulsa Sincronizar ahora.',
@@ -355,14 +368,28 @@ function placeholderText() {
 
 // ------------------------------------------------------------- signatures
 
+const cmpName = (a: string, b: string) => a.localeCompare(b, 'es', { sensitivity: 'base' });
+
+/**
+ * Position of each item once sorted by hand-made order (items without one go last, by name).
+ * Comparing positions instead of raw numbers means gaps (1, 5, 9) do not count as differences.
+ */
+function ranks<T>(items: T[], order: (t: T) => number | null, name: (t: T) => string): Map<T, number> {
+  const sorted = items
+    .slice()
+    .sort((a, b) => (order(a) ?? Infinity) - (order(b) ?? Infinity) || cmpName(name(a), name(b)));
+  return new Map(sorted.map((t, i) => [t, i]));
+}
+
 /** Order-independent description of a catalog, to know whether two sides differ. */
 export function signatureOfModel(m: VaultModel): string {
+  const rank = ranks(m.products, (p) => p.sort_order, (p) => p.name);
   const lines = [
     `ORDER|${m.groups.join('>')}`,
     ...m.groups.flatMap((g) => (m.subs[g] ?? []).map((s) => `S|${g}|${s}`)),
     ...m.products.map(
       (p) =>
-        `P|${p.group ?? ''}|${p.sub ?? ''}|${p.name}|${p.price_cents}|${p.promo_qty ?? ''}|${p.promo_price_cents ?? ''}|${p.imagePath ? 1 : 0}`,
+        `P|${p.group ?? ''}|${p.sub ?? ''}|${p.name}|${p.price_cents}|${p.promo_qty ?? ''}|${p.promo_price_cents ?? ''}|${p.imagePath ? 1 : 0}|${rank.get(p)}`,
     ),
   ];
   return lines.sort().join('\n');
@@ -372,13 +399,14 @@ export function signatureOfModel(m: VaultModel): string {
 export function signatureOfApp(data: ExportInput): string {
   const groupName = new Map(data.groups.map((g) => [g.id, safeName(g.name)]));
   const subName = new Map(data.subcategories.map((s) => [s.id, safeName(s.name)]));
+  const rank = ranks(data.products, (p) => p.sort_order, (p) => safeName(p.name));
   const lines = [
     `ORDER|${data.groups.map((g) => safeName(g.name)).join('>')}`,
     ...data.subcategories.map((s) => `S|${groupName.get(s.group_id) ?? ''}|${safeName(s.name)}`),
     ...data.products.map((p) => {
       const g = p.group_id != null ? groupName.get(p.group_id) ?? '' : '';
       const s = g && p.subcategory_id != null ? subName.get(p.subcategory_id) ?? '' : '';
-      return `P|${g}|${s}|${safeName(p.name)}|${p.price_cents}|${p.promo_qty ?? ''}|${p.promo_price_cents ?? ''}|${p.image_uri ? 1 : 0}`;
+      return `P|${g}|${s}|${safeName(p.name)}|${p.price_cents}|${p.promo_qty ?? ''}|${p.promo_price_cents ?? ''}|${p.image_uri ? 1 : 0}|${rank.get(p)}`;
     }),
   ];
   return lines.sort().join('\n');

@@ -1,5 +1,6 @@
 // Web/Windows-browser implementation: same API as repo.ts, backed by localStorage.
 import { DUPLICATE_NAME, normalizeName } from '@/lib/names';
+import { alphabeticalOrder, assignOrder, byCustomOrder } from '@/lib/order';
 import type { BackupPayload, Group, Product, Subcategory } from '@/types';
 import { INITIAL_CATALOG } from './initialData';
 
@@ -53,11 +54,16 @@ function createInitialData(): Data {
         group_id: groupId,
         subcategory_id: subId,
         created_at: Date.now(),
+        sort_order: 0,
         promo_qty: prod.promo_qty ?? null,
         promo_price_cents: prod.promo_price_cents ?? null,
       });
     }
   }
+
+  // Initial order: alphabetical (the order users already see).
+  const initialOrder = alphabeticalOrder(products);
+  products.forEach((p) => (p.sort_order = initialOrder.get(p.id) ?? 0));
 
   return {
     groups,
@@ -81,6 +87,12 @@ function load(): Data {
       }
       if (!parsed.frequencies) {
         parsed.frequencies = {};
+      }
+      if (parsed.products?.some((p) => typeof p.sort_order !== 'number')) {
+        // Catalog saved before custom order existed: start from the alphabetical order.
+        const initialOrder = alphabeticalOrder(parsed.products);
+        parsed.products.forEach((p) => (p.sort_order = initialOrder.get(p.id) ?? 0));
+        save(parsed);
       }
       if (
         (!parsed.groups || parsed.groups.length === 0) &&
@@ -218,7 +230,19 @@ export async function listProducts(): Promise<Product[]> {
       promo_qty: p.promo_qty ?? null,
       promo_price_cents: p.promo_price_cents ?? null,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    .sort(byCustomOrder);
+}
+
+/** Applies a hand-made order; see src/lib/order.ts. */
+export async function reorderProducts(orderedIds: number[]) {
+  if (orderedIds.length < 2) return;
+  const d = load();
+  const values = assignOrder(orderedIds, d.products);
+  d.products.forEach((p) => {
+    const v = values.get(p.id);
+    if (v !== undefined) p.sort_order = v;
+  });
+  save(d);
 }
 
 export async function getProduct(id: number): Promise<Product | null> {
@@ -247,7 +271,10 @@ export async function saveProduct(input: ProductInput, id?: number) {
   };
   const existing = id ? d.products.find((p) => p.id === id) : undefined;
   if (existing) Object.assign(existing, clean);
-  else d.products.push({ id: d.nextProductId++, created_at: Date.now(), ...clean });
+  else {
+    const next = Math.max(0, ...d.products.map((p) => p.sort_order ?? 0)) + 1;
+    d.products.push({ id: d.nextProductId++, created_at: Date.now(), sort_order: next, ...clean });
+  }
   save(d);
 }
 
@@ -267,10 +294,12 @@ export async function moveProductGroup(
 
 export async function addProductsBulk(items: { name: string; price_cents: number }[], groupId: number | null) {
   const d = load();
+  let next = Math.max(0, ...d.products.map((p) => p.sort_order ?? 0));
   for (const it of items) {
     d.products.push({
       id: d.nextProductId++,
       created_at: Date.now(),
+      sort_order: ++next,
       name: it.name.trim(),
       price_cents: it.price_cents,
       image_uri: null,
@@ -338,10 +367,12 @@ export async function importAllData(payload: BackupPayload): Promise<void> {
   const maxSubId = payload.subcategories.reduce((max, s) => Math.max(max, s.id), 0) + 1;
   const maxProdId = payload.products.reduce((max, p) => Math.max(max, p.id), 0) + 1;
 
+  // Backups made before custom order existed have no sort_order: keep the order they were exported in.
+  const fallback = alphabeticalOrder(payload.products);
   const data: Data = {
     groups: payload.groups,
     subcategories: payload.subcategories,
-    products: payload.products,
+    products: payload.products.map((p) => ({ ...p, sort_order: p.sort_order ?? fallback.get(p.id) ?? 0 })),
     nextGroupId: Math.max(100, maxGroupId),
     nextSubcategoryId: Math.max(100, maxSubId),
     nextProductId: Math.max(1000, maxProdId),

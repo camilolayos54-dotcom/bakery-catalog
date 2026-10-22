@@ -22,6 +22,7 @@ import { hasPromo } from '@/lib/cart';
 import { notify } from '@/lib/dialog';
 import { pickCover } from '@/lib/images';
 import { formatPrice, isSellablePrice, parsePrice } from '@/lib/money';
+import { moveBy, moveToIndex } from '@/lib/order';
 import { useStore } from '@/store';
 
 const PAD = 8;
@@ -59,6 +60,12 @@ export default function Catalog() {
   const [quickGroupId, setQuickGroupId] = useState<number | null>(null);
   const [quickSubcategoryId, setQuickSubcategoryId] = useState<number | null>(null);
 
+  // Modo mover: se activa manteniendo presionado 2 seg un producto
+  const [movingId, setMovingId] = useState<number | null>(null);
+  const [showMoveCategory, setShowMoveCategory] = useState(false);
+  const [targetGroupId, setTargetGroupId] = useState<number | null>(null);
+  const [targetSubId, setTargetSubId] = useState<number | null>(null);
+
   // Cantidad de productos con promociones
   const promoCount = useMemo(() => products.filter((p) => hasPromo(p)).length, [products]);
   // Solo cuentan los frecuentes que todavía existen en el catálogo
@@ -82,6 +89,12 @@ export default function Catalog() {
   function handleSelectGroup(id: number | null | 'frecuentes' | 'promociones') {
     setGroupId(id);
     setSubcategoryId(null); // reiniciar subcategoría al cambiar grupo
+    setMovingId(null);
+  }
+
+  function handleSelectSubcategory(id: number | null) {
+    setSubcategoryId(id);
+    setMovingId(null);
   }
 
   // Abre el modal rellenando automáticamente la categoría y subcategoría activas
@@ -160,6 +173,64 @@ export default function Catalog() {
     });
   }, [products, groupId, subcategoryId, query, frequentIds]);
 
+  // ---- Mover productos -------------------------------------------------------
+  // Frecuentes y Promociones tienen su propio orden: solo se reordena en "Todos" o dentro de una categoría.
+  const canReorder = groupId !== 'frecuentes' && groupId !== 'promociones';
+  const movingProduct = movingId != null ? (products.find((p) => p.id === movingId) ?? null) : null;
+  const moveMode = movingProduct !== null && canReorder;
+  const visibleIds = useMemo(() => visible.map((p) => p.id), [visible]);
+
+  function startMove(id: number) {
+    if (!canReorder) {
+      return notify(
+        'Mover productos',
+        'Para cambiar el orden entra a "Todos" o a una categoría. Frecuentes y Promociones se ordenan solas.',
+      );
+    }
+    setMovingId(id);
+  }
+
+  async function applyOrder(ids: number[]) {
+    await repo.reorderProducts(ids);
+    await reload();
+  }
+
+  function moveStep(delta: -1 | 1) {
+    if (movingId != null) void applyOrder(moveBy(visibleIds, movingId, delta));
+  }
+
+  function moveEdge(edge: 'start' | 'end') {
+    if (movingId != null) void applyOrder(moveToIndex(visibleIds, movingId, edge === 'start' ? 0 : visibleIds.length - 1));
+  }
+
+  /** Tocar otra tarjeta: el producto queda exactamente en esa posición. */
+  function dropOn(targetId: number) {
+    if (movingId == null || targetId === movingId) return;
+    const idx = visibleIds.indexOf(targetId);
+    if (idx >= 0) void applyOrder(moveToIndex(visibleIds, movingId, idx));
+  }
+
+  function openMoveCategory() {
+    if (!movingProduct) return;
+    setTargetGroupId(movingProduct.group_id);
+    setTargetSubId(movingProduct.subcategory_id);
+    setShowMoveCategory(true);
+  }
+
+  async function confirmMoveCategory() {
+    if (!movingProduct) return;
+    await repo.moveProductGroup(movingProduct.id, targetGroupId, targetSubId);
+    await reload();
+    const gName = groups.find((g) => g.id === targetGroupId)?.name ?? 'Sin categoría';
+    const sName = subcategories.find((s) => s.id === targetSubId)?.name;
+    setShowMoveCategory(false);
+    setMovingId(null);
+    notify('Producto movido', `"${movingProduct.name}" ahora está en ${gName}${sName ? ` › ${sName}` : ''}.`);
+  }
+
+  const movingIndex = movingId != null ? visibleIds.indexOf(movingId) : -1;
+  const targetSubs = targetGroupId !== null ? subcategories.filter((s) => s.group_id === targetGroupId) : [];
+
   const activeGroupObj = groups.find((g) => g.id === quickGroupId);
   const activeSubObj = subcategories.find((s) => s.id === quickSubcategoryId);
   const quickCents = parsePrice(quickPrice);
@@ -216,14 +287,14 @@ export default function Catalog() {
             <SubChip
               label="Todas las presentaciones"
               active={subcategoryId === null}
-              onPress={() => setSubcategoryId(null)}
+              onPress={() => handleSelectSubcategory(null)}
             />
             {activeSubcategories.map((s) => (
               <SubChip
                 key={s.id}
                 label={s.name}
                 active={subcategoryId === s.id}
-                onPress={() => setSubcategoryId(s.id)}
+                onPress={() => handleSelectSubcategory(s.id)}
               />
             ))}
           </ScrollView>
@@ -232,9 +303,15 @@ export default function Catalog() {
 
       {/* Indicador de ayuda */}
       <View style={styles.hintWrap}>
-        <Text style={styles.hintText}>
-          Toca <Text style={styles.hintBold}>＋</Text> o <Text style={styles.hintBold}>−</Text> para sumar o restar · Mantén presionado <Text style={styles.hintBold}>2 seg</Text> para editar
-        </Text>
+        {moveMode ? (
+          <Text style={[styles.hintText, styles.hintMoving]}>
+            Moviendo <Text style={styles.hintBold}>{movingProduct?.name}</Text> · toca otra tarjeta para ponerlo ahí o usa los botones de abajo
+          </Text>
+        ) : (
+          <Text style={styles.hintText}>
+            Toca <Text style={styles.hintBold}>＋</Text> o <Text style={styles.hintBold}>−</Text> para sumar o restar · <Text style={styles.hintBold}>✎</Text> para editar · Mantén <Text style={styles.hintBold}>2 seg</Text> para mover
+          </Text>
+        )}
       </View>
 
       {/* Cuadrícula de productos */}
@@ -243,8 +320,8 @@ export default function Catalog() {
         key={columns}
         keyExtractor={(p) => String(p.id)}
         numColumns={columns}
-        extraData={cart}
-        contentContainerStyle={styles.grid}
+        extraData={[cart, movingId, moveMode]}
+        contentContainerStyle={[styles.grid, moveMode && { paddingBottom: 190 }]}
         renderItem={({ item }) => {
           const qty = cart[item.id] ?? 0;
           return (
@@ -252,9 +329,12 @@ export default function Catalog() {
               product={item}
               width={cardWidth}
               qty={qty}
-              onIncrement={() => addToCart(item.id)}
+              moving={moveMode && item.id === movingId}
+              moveMode={moveMode}
+              onIncrement={() => (moveMode ? dropOn(item.id) : addToCart(item.id))}
               onDecrement={() => removeFromCart(item.id)}
               onEdit={() => router.push(`/editor/${item.id}`)}
+              onStartMove={() => startMove(item.id)}
             />
           );
         }}
@@ -281,10 +361,103 @@ export default function Catalog() {
         }
       />
 
-      {/* BOTÓN FLOTANTE (+) SIEMPRE VISIBLE */}
-      <Pressable style={styles.fab} onPress={openQuickAdd}>
-        <Text style={styles.fabIcon}>＋</Text>
-      </Pressable>
+      {/* BOTÓN FLOTANTE (+) */}
+      {!moveMode ? (
+        <Pressable style={styles.fab} onPress={openQuickAdd}>
+          <Text style={styles.fabIcon}>＋</Text>
+        </Pressable>
+      ) : (
+        /* BARRA DE MOVER */
+        <View style={styles.moveBar}>
+          <Text style={styles.moveBarTitle} numberOfLines={1}>
+            ↕ {movingProduct?.name} · posición {movingIndex + 1} de {visibleIds.length}
+          </Text>
+          <View style={styles.moveRow}>
+            <MoveBtn label="⏮ Inicio" disabled={movingIndex <= 0} onPress={() => moveEdge('start')} />
+            <MoveBtn label="◀ Antes" disabled={movingIndex <= 0} onPress={() => moveStep(-1)} />
+            <MoveBtn label="Después ▶" disabled={movingIndex < 0 || movingIndex >= visibleIds.length - 1} onPress={() => moveStep(1)} />
+            <MoveBtn label="Final ⏭" disabled={movingIndex < 0 || movingIndex >= visibleIds.length - 1} onPress={() => moveEdge('end')} />
+          </View>
+          <View style={styles.moveRow}>
+            <MoveBtn label="📂 Cambiar categoría" onPress={openMoveCategory} wide />
+            <MoveBtn label="✓ Listo" onPress={() => setMovingId(null)} primary />
+          </View>
+        </View>
+      )}
+
+      {/* MODAL: CAMBIAR DE CATEGORÍA UN PRODUCTO */}
+      <Modal visible={showMoveCategory} animationType="slide" transparent onRequestClose={() => setShowMoveCategory(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.modalTitle}>📂 Cambiar categoría</Text>
+                <Text style={styles.modalSubtitle} numberOfLines={1}>{movingProduct?.name}</Text>
+              </View>
+              <Pressable style={styles.modalClose} onPress={() => setShowMoveCategory(false)}>
+                <Text style={styles.modalCloseText}>✕</Text>
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+              <Text style={styles.fieldLabel}>Categoría:</Text>
+              <View style={styles.wrapChips}>
+                <Pressable
+                  onPress={() => {
+                    setTargetGroupId(null);
+                    setTargetSubId(null);
+                  }}
+                  style={[styles.smallChip, targetGroupId === null && styles.smallChipActive]}
+                >
+                  <Text style={[styles.smallChipText, targetGroupId === null && styles.smallChipTextActive]}>Sin categoría</Text>
+                </Pressable>
+                {groups.map((g) => (
+                  <Pressable
+                    key={g.id}
+                    onPress={() => {
+                      setTargetGroupId(g.id);
+                      setTargetSubId(null);
+                    }}
+                    style={[styles.smallChip, targetGroupId === g.id && styles.smallChipActive]}
+                  >
+                    <Text style={[styles.smallChipText, targetGroupId === g.id && styles.smallChipTextActive]}>
+                      {targetGroupId === g.id ? '✓ ' : ''}{g.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {targetSubs.length > 0 ? (
+                <>
+                  <Text style={styles.fieldLabel}>Subcategoría / Presentación:</Text>
+                  <View style={styles.wrapChips}>
+                    <Pressable
+                      onPress={() => setTargetSubId(null)}
+                      style={[styles.smallSubChip, targetSubId === null && styles.smallSubChipActive]}
+                    >
+                      <Text style={[styles.smallSubChipText, targetSubId === null && styles.smallSubChipTextActive]}>Sin subcategoría</Text>
+                    </Pressable>
+                    {targetSubs.map((s) => (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => setTargetSubId(s.id)}
+                        style={[styles.smallSubChip, targetSubId === s.id && styles.smallSubChipActive]}
+                      >
+                        <Text style={[styles.smallSubChipText, targetSubId === s.id && styles.smallSubChipTextActive]}>
+                          {targetSubId === s.id ? '✓ ' : ''}{s.name}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </>
+              ) : null}
+
+              <Pressable style={styles.quickSaveBtn} onPress={() => void confirmMoveCategory()}>
+                <Text style={styles.quickSaveText}>Mover aquí</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* MODAL DE AÑADIR PRODUCTO RÁPIDO */}
       <Modal
@@ -418,6 +591,30 @@ function Chip({ label, active, onPress }: { label: string; active?: boolean; onP
   );
 }
 
+function MoveBtn({
+  label,
+  onPress,
+  disabled,
+  primary,
+  wide,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  primary?: boolean;
+  wide?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[styles.moveBtn, wide && { flex: 2 }, primary && styles.moveBtnPrimary, disabled && styles.moveBtnDisabled]}
+    >
+      <Text style={[styles.moveBtnText, primary && { color: '#fff' }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function SubChip({ label, active, onPress }: { label: string; active?: boolean; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={[styles.subChip, active && styles.subChipActive]}>
@@ -503,6 +700,37 @@ const styles = StyleSheet.create({
   },
   hintText: { fontSize: 11, color: '#7a6a58', textAlign: 'center' },
   hintBold: { fontWeight: '800', color: '#5a3a1a' },
+  hintMoving: { color: '#1565c0' },
+
+  /* Barra de mover */
+  moveBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#12385f',
+    padding: 12,
+    paddingBottom: 16,
+    gap: 8,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    elevation: 12,
+    zIndex: 999,
+  },
+  moveBarTitle: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  moveRow: { flexDirection: 'row', gap: 6 },
+  moveBtn: {
+    flex: 1,
+    backgroundColor: '#e3eefb',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moveBtnPrimary: { backgroundColor: '#2e7d32' },
+  moveBtnDisabled: { opacity: 0.35 },
+  moveBtnText: { color: '#12385f', fontWeight: '800', fontSize: 12 },
+  wrapChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: 4 },
 
   grid: { padding: PAD, paddingBottom: 110 },
   emptyContainer: { alignItems: 'center', marginTop: 60, paddingHorizontal: 30 },

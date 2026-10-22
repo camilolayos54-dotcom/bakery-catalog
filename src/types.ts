@@ -10,6 +10,8 @@ export type Product = {
   group_id: number | null;
   subcategory_id: number | null;
   created_at: number;
+  /** Position in the catalog (lower first). Users can reorder products by hand. */
+  sort_order: number;
   /** Promotion: buying `promo_qty` units costs `promo_price_cents` in total. */
   promo_qty: number | null;
   promo_price_cents: number | null;

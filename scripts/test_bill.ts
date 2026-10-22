@@ -21,7 +21,7 @@ const prod = (id: number, price: number, promo?: [number, number]): Product => (
   image_uri: null,
   group_id: null,
   subcategory_id: null,
-  created_at: 0,
+  created_at: 0, sort_order: 0,
   promo_qty: promo ? promo[0] : null,
   promo_price_cents: promo ? promo[1] * 100 : null,
 });

@@ -42,7 +42,7 @@ if (action === 'export') {
         image_uri: null,
         group_id: groupId,
         subcategory_id: subId,
-        created_at: Date.now(),
+        created_at: Date.now(), sort_order: 0,
         promo_qty: p.promo_qty ?? null,
         promo_price_cents: p.promo_price_cents ?? null,
       });

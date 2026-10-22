@@ -105,7 +105,7 @@ function fullSig(d: AppData) {
   return JSON.stringify([
     d.groups.map((g) => [g.id, g.name, g.sort_order]),
     d.subcategories.map((s) => [s.id, s.group_id, s.name, s.sort_order]),
-    d.products.map((p) => [p.id, p.name, p.price_cents, p.image_uri, p.group_id, p.subcategory_id, p.promo_qty, p.promo_price_cents]),
+    d.products.map((p) => [p.id, p.name, p.price_cents, p.image_uri, p.group_id, p.subcategory_id, p.promo_qty, p.promo_price_cents, p.sort_order]),
   ]);
 }
 
@@ -206,6 +206,16 @@ async function pull(): Promise<{ result: PullResult; products: number }> {
 
   let nextProduct = Math.max(0, ...data.products.map((p) => p.id)) + 1;
   const products: Product[] = [];
+  // Position in the catalog: the notes' `orden` first, notes without one go last (alphabetical).
+  const position = new Map<VaultProduct, number>(
+    [...model.products]
+      .sort(
+        (a, b) =>
+          (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity) ||
+          a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }),
+      )
+      .map((p, i) => [p, i + 1]),
+  );
   const idMap = new Map<number, number>(); // old product id -> new id (to carry sales stats)
   const usedOld = new Set<number>();
 
@@ -240,6 +250,7 @@ async function pull(): Promise<{ result: PullResult; products: number }> {
       group_id: gid,
       subcategory_id: sid,
       created_at: reusable?.created_at ?? Date.now(),
+      sort_order: position.get(mp) ?? 0,
       promo_qty: mp.promo_qty,
       promo_price_cents: mp.promo_price_cents,
     });
@@ -277,6 +288,7 @@ function sameProduct(a: string, b: string) {
     x.price_cents === y.price_cents &&
     x.promo_qty === y.promo_qty &&
     x.promo_price_cents === y.promo_price_cents &&
+    x.order === y.order &&
     x.image === y.image
   );
 }
