@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { type GestureResponderEvent, type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { hasPromo, promoLabel } from '@/lib/cart';
 import { formatPrice } from '@/lib/money';
@@ -12,14 +12,17 @@ type Props = {
   product: Product;
   width: number;
   qty: number;
-  /** This is the product being moved. */
+  /** Drawn as the floating copy that follows the finger while dragging. */
   moving?: boolean;
-  /** Some product is being moved: cards become drop targets instead of "add to bill" buttons. */
-  moveMode?: boolean;
+  /** The place the dragged product left: shown faded. */
+  dim?: boolean;
   onIncrement: () => void;
   onDecrement: () => void;
   onEdit: () => void;
-  onStartMove: () => void;
+  /** The card was held long enough: start dragging it. */
+  onStartMove?: (e: GestureResponderEvent) => void;
+  onPressOut?: () => void;
+  onLayout?: (e: LayoutChangeEvent) => void;
 };
 
 export function ProductCard({
@@ -27,20 +30,23 @@ export function ProductCard({
   width,
   qty,
   moving,
-  moveMode,
+  dim,
   onIncrement,
   onDecrement,
   onEdit,
   onStartMove,
+  onPressOut,
+  onLayout,
 }: Props) {
   const inCart = qty > 0;
 
   return (
-    <View style={{ width, padding: 5 }}>
+    <View style={[{ width, padding: 5 }, dim && { opacity: 0.3 }]} onLayout={onLayout}>
       <Pressable
         style={[styles.card, inCart && styles.selected, moving && styles.moving]}
         onPress={onIncrement}
         onLongPress={onStartMove}
+        onPressOut={onPressOut}
         delayLongPress={MOVE_HOLD_MS}
       >
         <View style={styles.imageContainer}>
@@ -54,7 +60,7 @@ export function ProductCard({
 
           {moving ? (
             <View style={styles.movingTag}>
-              <Text style={styles.movingTagText}>↕ Moviendo</Text>
+              <Text style={styles.movingTagText}>↕</Text>
             </View>
           ) : inCart ? (
             <View style={styles.badge}>
@@ -69,19 +75,17 @@ export function ProductCard({
           ) : null}
 
           {/* Quick edit */}
-          {!moveMode ? (
-            <Pressable
-              style={styles.editBtn}
-              onPress={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              hitSlop={8}
-              accessibilityLabel={`Editar ${product.name}`}
-            >
-              <Text style={styles.editBtnText}>✎</Text>
-            </Pressable>
-          ) : null}
+          <Pressable
+            style={styles.editBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            hitSlop={8}
+            accessibilityLabel={`Editar ${product.name}`}
+          >
+            <Text style={styles.editBtnText}>✎</Text>
+          </Pressable>
         </View>
 
         <View style={styles.info}>
@@ -91,11 +95,7 @@ export function ProductCard({
           <Text style={styles.price}>{formatPrice(product.price_cents)}</Text>
 
           <View style={styles.actionRow}>
-            {moveMode ? (
-              <View style={styles.dropHint}>
-                <Text style={styles.dropHintText}>{moving ? 'Elige dónde ponerlo' : 'Toca para poner aquí'}</Text>
-              </View>
-            ) : inCart ? (
+            {inCart ? (
               <View style={styles.stepperWrap}>
                 <Pressable
                   style={styles.stepBtnMinus}
