@@ -47,3 +47,8 @@ chat_data/
 
 # APKs compilados
 *.apk
+
+# Firma del APK (NO subir)
+credentials.json
+*.keystore
+*.jks
