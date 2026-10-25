@@ -3,6 +3,7 @@ import { DUPLICATE_NAME, normalizeName } from '@/lib/names';
 import { alphabeticalOrder, assignOrder, byCustomOrder } from '@/lib/order';
 import type { BackupPayload, Group, Product, Subcategory } from '@/types';
 import { INITIAL_CATALOG } from './initialData';
+import { seedImageUri } from './seedImages';
 
 type Data = {
   groups: Group[];
@@ -50,20 +51,22 @@ function createInitialData(): Data {
         id: pId++,
         name: prod.name,
         price_cents: prod.price_cents,
-        image_uri: null,
+        image_uri: seedImageUri(prod.image),
         group_id: groupId,
         subcategory_id: subId,
-        created_at: Date.now(),
-        sort_order: 0,
+        created_at: prod.created_at ?? Date.now(),
+        sort_order: prod.sort_order ?? 0,
         promo_qty: prod.promo_qty ?? null,
         promo_price_cents: prod.promo_price_cents ?? null,
       });
     }
   }
 
-  // Initial order: alphabetical (the order users already see).
-  const initialOrder = alphabeticalOrder(products);
-  products.forEach((p) => (p.sort_order = initialOrder.get(p.id) ?? 0));
+  // Catalog without its own order: alphabetical (the order users already see).
+  if (products.some((p) => !p.sort_order)) {
+    const initialOrder = alphabeticalOrder(products);
+    products.forEach((p) => (p.sort_order = initialOrder.get(p.id) ?? 0));
+  }
 
   return {
     groups,

@@ -3,6 +3,7 @@ import { alphabeticalOrder, assignOrder } from '@/lib/order';
 import type { BackupPayload, Group, Product, Subcategory } from '@/types';
 import { getDb, RENUMBER_PRODUCTS_ALPHABETICALLY } from './client';
 import { INITIAL_CATALOG } from './initialData';
+import { seedImageUri } from './seedImages';
 
 export async function listGroups(): Promise<Group[]> {
   const db = await getDb();
@@ -237,6 +238,12 @@ async function seedNow(force: boolean) {
   const currentProds = await listProducts();
   if (!force && currentProds.length > 0) return;
 
+  // Photos go to disk before the transaction so a failed write never leaves half a catalog.
+  const photos = new Map<string, string | null>();
+  for (const cat of INITIAL_CATALOG) for (const p of cat.products) if (p.image) photos.set(p.image, seedImageUri(p.image));
+
+  const now = Date.now();
+  let hasOrder = true;
   await db.withTransactionAsync(async () => {
     if (force) {
       await db.runAsync('DELETE FROM product_stats');
@@ -268,20 +275,23 @@ async function seedNow(force: boolean) {
       // Seed products with subcategory links
       for (const p of cat.products) {
         const subId = p.subcategory ? subcategoryMap.get(p.subcategory) ?? null : null;
+        if (p.sort_order == null) hasOrder = false;
         await db.runAsync(
-          'INSERT INTO products (name, price_cents, image_uri, group_id, subcategory_id, promo_qty, promo_price_cents, created_at) VALUES (?, ?, NULL, ?, ?, ?, ?, ?)',
+          'INSERT INTO products (name, price_cents, image_uri, group_id, subcategory_id, promo_qty, promo_price_cents, created_at, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           p.name,
           p.price_cents,
+          (p.image ? photos.get(p.image) : null) ?? null,
           gid,
           subId,
           p.promo_qty ?? null,
           p.promo_price_cents ?? null,
-          Date.now(),
+          p.created_at ?? now,
+          p.sort_order ?? 0,
         );
       }
     }
-    // Initial order: alphabetical (the order users already see).
-    await db.execAsync(RENUMBER_PRODUCTS_ALPHABETICALLY);
+    // Catalog without its own order: alphabetical (the order users already see).
+    if (!hasOrder) await db.execAsync(RENUMBER_PRODUCTS_ALPHABETICALLY);
   });
 }
 

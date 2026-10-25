@@ -56,10 +56,15 @@ async function main() {
     await repo.seedInitialData(false);
     const ms = Date.now() - t0;
     const [g, s, p] = [await repo.listGroups(), await repo.listSubcategories(), await repo.listProducts()];
-    ok(g.length === 8 && s.length === 23 && p.length === 113, `arranque en frío: ${g.length} categorías, ${s.length} subcategorías, ${p.length} productos`);
+    ok(g.length === 10 && s.length === 25 && p.length === 192, `arranque en frío: ${g.length} categorías, ${s.length} subcategorías, ${p.length} productos`);
     ok(ms < 5000, `el arranque en frío tarda ${ms} ms (< 5 s)`);
     ok(p.every((x) => x.price_cents > 0), 'todos los productos iniciales tienen precio > 0');
     ok(p.filter((x) => x.promo_qty).length === 3, 'las 3 promociones iniciales se cargaron');
+    const withPhoto = p.filter((x) => x.image_uri);
+    ok(withPhoto.length === 35 && withPhoto.every((x) => x.image_uri!.startsWith('file://') && fs.existsSync(x.image_uri!.replace('file://', '')) && fs.statSync(x.image_uri!.replace('file://', '')).size > 1000), 'las 35 fotos del catálogo se guardaron como archivos reales');
+    const jpg = fs.readFileSync(withPhoto[0].image_uri!.replace('file://', ''));
+    ok(jpg[0] === 0xff && jpg[1] === 0xd8, 'la foto guardada es un JPEG válido');
+    ok(new Set(p.map((x) => x.created_at)).size === 192, 'cada producto conserva su fecha de creación (Recientes)');
     const orphan = p.filter((x) => x.subcategory_id != null && !s.some((y) => y.id === x.subcategory_id));
     ok(orphan.length === 0, 'ninguna subcategoría de producto apunta a algo inexistente');
   }
@@ -70,7 +75,7 @@ async function main() {
     cleanup.push(f);
     const { repo } = boot(f);
     await Promise.all([repo.seedInitialData(false), repo.seedInitialData(false), repo.seedInitialData(false)]);
-    ok((await repo.listProducts()).length === 113, 'tres arranques simultáneos no duplican el catálogo (113)');
+    ok((await repo.listProducts()).length === 192, 'tres arranques simultáneos no duplican el catálogo (192)');
   }
 
   // 3. Actualizar desde la primera versión de la app (sin subcategorías ni promociones)
@@ -162,7 +167,7 @@ async function main() {
     // limpiar y comprobar que el catálogo original quedó intacto
     for (const p of (await repo.listProducts()).filter((x) => x.name.startsWith('ZZ_TEST'))) await repo.deleteProduct(p.id);
     await repo.deleteGroup(a);
-    ok((await repo.listProducts()).length === 113 && (await repo.listGroups()).length === n0, 'tras borrar lo de prueba el catálogo vuelve a 113 productos y 8 categorías');
+    ok((await repo.listProducts()).length === 192 && (await repo.listGroups()).length === n0, 'tras borrar lo de prueba el catálogo vuelve a 192 productos y 10 categorías');
   }
 
   // 5. Exportar -> importar (respaldo) conserva todo
@@ -195,7 +200,7 @@ async function main() {
     await repo.recordSale({ [p[0].id]: 2 });
     await repo.addGroup('ZZ_TEST borrar');
     await repo.seedInitialData(true);
-    ok((await repo.listProducts()).length === 113 && (await repo.listGroups()).length === 8, 'restaurar catálogo vuelve a 113 productos y 8 categorías');
+    ok((await repo.listProducts()).length === 192 && (await repo.listGroups()).length === 10, 'restaurar catálogo vuelve a 192 productos y 10 categorías');
     ok((await repo.getFrequentProductIds()).length === 0, 'restaurar catálogo limpia las frecuencias viejas');
   }
 
@@ -208,7 +213,7 @@ async function main() {
     const first = await throws(() => repo.listGroups());
     const second = await throws(() => repo.seedInitialData(false));
     ok(first === 'disco lleno', 'el primer intento falla con el error real (no se queda colgado)');
-    ok(second === null && (await repo.listProducts()).length === 113, 'el segundo intento funciona (el fallo no queda guardado)');
+    ok(second === null && (await repo.listProducts()).length === 192, 'el segundo intento funciona (el fallo no queda guardado)');
   }
 
   // 8. Orden personalizado de productos
@@ -236,9 +241,8 @@ async function main() {
     await repo.seedInitialData(false);
     const all = await repo.listProducts();
     const orders = all.map((p) => p.sort_order);
-    ok(new Set(orders).size === 113 && orders[0] === 1 && orders[112] === 113, 'catálogo inicial: 113 posiciones únicas (1..113)');
-    const sortedByName = all.slice().sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase(), 'es'));
-    ok(all[0].name.toLowerCase().localeCompare(sortedByName[0].name.toLowerCase(), 'es') === 0, 'catálogo inicial: empieza por el primero alfabético');
+    ok(new Set(orders).size === 192 && orders[0] === 1 && orders[191] === 193, 'catálogo inicial: 192 posiciones únicas (1..193)');
+    ok(orders.every((o, i) => i === 0 || o > orders[i - 1]), 'catálogo inicial: la lista sigue el orden guardado del catálogo');
 
     // 8c. Mover productos de una lista filtrada
     const group = (await repo.listGroups())[0];
@@ -253,7 +257,7 @@ async function main() {
     ok(afterGroup.join(',') === moved.join(','), 'mover el último de una categoría al inicio funciona');
     const others = (l: typeof all) => l.filter((p) => p.group_id !== group.id).map((p) => p.id).join(',');
     ok(others(after) === others(all), 'los productos de otras categorías no se movieron');
-    ok(new Set(after.map((p) => p.sort_order)).size === 113, 'las posiciones siguen siendo únicas');
+    ok(new Set(after.map((p) => p.sort_order)).size === 192, 'las posiciones siguen siendo únicas');
     ok((await repo.listProducts()).map((p) => p.id).join(',') === after.map((p) => p.id).join(','), 'el orden se conserva al volver a leer');
 
     // 8d. Productos nuevos van al final, en el orden en que se agregan

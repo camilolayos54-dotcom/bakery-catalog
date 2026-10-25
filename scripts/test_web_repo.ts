@@ -40,12 +40,14 @@ async function main() {
 
   await repo.seedInitialData(false);
   const [g0, s0, p0] = [await repo.listGroups(), await repo.listSubcategories(), await repo.listProducts()];
-  ok(g0.length === 8 && s0.length === 23 && p0.length === 113, `primer arranque: ${g0.length} categorías, ${s0.length} subcategorías, ${p0.length} productos`);
+  ok(g0.length === 10 && s0.length === 25 && p0.length === 192, `primer arranque: ${g0.length} categorías, ${s0.length} subcategorías, ${p0.length} productos`);
+  ok(p0.filter((x) => x.image_uri).length === 35, 'las 35 fotos vienen incluidas');
+  ok(p0.some((x) => /cocas?cola/i.test(x.name)), 'el catálogo incluye Coca Cola');
   await repo.seedInitialData(false);
-  ok((await repo.listProducts()).length === 113, 'arrancar otra vez no duplica el catálogo');
+  ok((await repo.listProducts()).length === 192, 'arrancar otra vez no duplica el catálogo');
 
   const a = await repo.addGroup('ZZ_TEST Grupo A');
-  ok((await repo.addGroup(' zz_test  GRUPO a ')) === a && (await repo.listGroups()).length === 9, 'grupo repetido (otra mayúscula/espacios) no se duplica');
+  ok((await repo.addGroup(' zz_test  GRUPO a ')) === a && (await repo.listGroups()).length === 11, 'grupo repetido (otra mayúscula/espacios) no se duplica');
   const b = await repo.addGroup('ZZ_TEST Grupo B');
   ok((await throws(() => repo.renameGroup(b, 'zz_test grupo a'))) === 'DUPLICATE_NAME', 'renombrar a un nombre existente es rechazado');
   await repo.renameGroup(b, 'ZZ_TEST Grupo B2');
@@ -95,11 +97,11 @@ async function main() {
   // limpieza y comparación con el catálogo original
   for (const p of (await repo.listProducts()).filter((x) => x.name.startsWith('ZZ_TEST'))) await repo.deleteProduct(p.id);
   await repo.deleteGroup(a);
-  ok((await repo.listProducts()).length === 113 && (await repo.listGroups()).length === 8, 'tras borrar lo de prueba vuelve a 113 productos y 8 categorías');
+  ok((await repo.listProducts()).length === 192 && (await repo.listGroups()).length === 10, 'tras borrar lo de prueba vuelve a 192 productos y 10 categorías');
 
   await repo.recordSale({ [(await repo.listProducts())[0].id]: 2 });
   await repo.seedInitialData(true);
-  ok((await repo.listProducts()).length === 113 && (await repo.getFrequentProductIds()).length === 0, 'restaurar catálogo: 113 productos y sin frecuencias viejas');
+  ok((await repo.listProducts()).length === 192 && (await repo.getFrequentProductIds()).length === 0, 'restaurar catálogo: 192 productos y sin frecuencias viejas');
 
   // ---- Orden personalizado
   const ls = (globalThis as any).localStorage;
@@ -119,7 +121,7 @@ async function main() {
   ls.clear();
   await repo.seedInitialData(false);
   const all = await repo.listProducts();
-  ok(new Set(all.map((p) => p.sort_order)).size === 113 && all[0].sort_order === 1 && all[112].sort_order === 113, 'catálogo inicial: 113 posiciones únicas (1..113)');
+  ok(new Set(all.map((p) => p.sort_order)).size === 192 && all[0].sort_order === 1 && all[191].sort_order === 193, 'catálogo inicial: 192 posiciones únicas (1..193)');
   const grp = (await repo.listGroups())[0];
   const ids = all.filter((p) => p.group_id === grp.id).map((p) => p.id);
   const moved = ids.slice();
@@ -128,7 +130,7 @@ async function main() {
   const after = await repo.listProducts();
   ok(after.filter((p) => p.group_id === grp.id).map((p) => p.id).join(',') === moved.join(','), 'mover el último de una categoría al inicio funciona');
   const others = (l: typeof all) => l.filter((p) => p.group_id !== grp.id).map((p) => p.id).join(',');
-  ok(others(after) === others(all) && new Set(after.map((p) => p.sort_order)).size === 113, 'otras categorías no se mueven y las posiciones siguen únicas');
+  ok(others(after) === others(all) && new Set(after.map((p) => p.sort_order)).size === 192, 'otras categorías no se mueven y las posiciones siguen únicas');
   await repo.saveProduct({ name: 'AAA nuevo', price_cents: 100, image_uri: null, group_id: null, subcategory_id: null, promo_qty: null, promo_price_cents: null });
   await repo.addProductsBulk([{ name: 'AAA bulk 1', price_cents: 100 }, { name: 'AAA bulk 2', price_cents: 100 }], null);
   ok((await repo.listProducts()).slice(-3).map((p) => p.name).join('|') === 'AAA nuevo|AAA bulk 1|AAA bulk 2', 'productos nuevos quedan al final en el orden en que se agregan');

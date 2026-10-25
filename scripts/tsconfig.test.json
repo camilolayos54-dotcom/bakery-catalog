@@ -4,7 +4,8 @@
     "baseUrl": "..",
     "paths": {
       "@/*": ["src/*"],
-      "expo-sqlite": ["scripts/shims/expo-sqlite.ts"]
+      "expo-sqlite": ["scripts/shims/expo-sqlite.ts"],
+      "expo-file-system": ["scripts/shims/expo-file-system.ts"]
     }
   },
   "include": ["../src/**/*", "./**/*.ts"]
