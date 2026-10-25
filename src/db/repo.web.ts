@@ -77,43 +77,58 @@ function createInitialData(): Data {
 }
 
 function load(): Data {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Data;
-      if (!parsed.subcategories) {
-        parsed.subcategories = [];
-        parsed.nextSubcategoryId = 1;
-      }
-      if (!parsed.frequencies) {
-        parsed.frequencies = {};
-      }
-      if (parsed.products?.some((p) => typeof p.sort_order !== 'number')) {
-        // Catalog saved before custom order existed: start from the alphabetical order.
-        const initialOrder = alphabeticalOrder(parsed.products);
-        parsed.products.forEach((p) => (p.sort_order = initialOrder.get(p.id) ?? 0));
-        save(parsed);
-      }
-      if (
-        (!parsed.groups || parsed.groups.length === 0) &&
-        (!parsed.products || parsed.products.length === 0)
-      ) {
-        const initial = createInitialData();
-        save(initial);
-        return initial;
-      }
-      return parsed;
+  const raw = localStorage.getItem(KEY);
+  let parsed: Data | null = null;
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw) as Data;
+    } catch {
+      // Damaged content: keep a copy instead of silently replacing the user's catalog.
+      try {
+        localStorage.setItem(`${KEY}-damaged`, raw);
+      } catch {}
     }
-  } catch {}
+  }
+
+  if (parsed) {
+    if (!parsed.subcategories) {
+      parsed.subcategories = [];
+      parsed.nextSubcategoryId = 1;
+    }
+    if (!parsed.frequencies) {
+      parsed.frequencies = {};
+    }
+    if (parsed.products?.some((p) => typeof p.sort_order !== 'number')) {
+      // Catalog saved before custom order existed: start from the alphabetical order.
+      const initialOrder = alphabeticalOrder(parsed.products);
+      parsed.products.forEach((p) => (p.sort_order = initialOrder.get(p.id) ?? 0));
+      save(parsed);
+    }
+    if ((!parsed.groups || parsed.groups.length === 0) && (!parsed.products || parsed.products.length === 0)) {
+      const initial = createInitialData();
+      save(initial);
+      return initial;
+    }
+    return parsed;
+  }
+
   const initial = createInitialData();
   save(initial);
   return initial;
 }
 
+/** Browsers keep about 5-10 MB per site: tell the user instead of failing silently. */
 function save(d: Data) {
-  localStorage.setItem(KEY, JSON.stringify(d));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(d));
+  } catch (e) {
+    const msg =
+      'El navegador se quedó sin espacio para guardar el catálogo (suele pasar con muchas fotos grandes). ' +
+      'Exporta un respaldo y quita fotos pesadas.';
+    if (typeof window !== 'undefined' && typeof window.alert === 'function') window.alert(msg);
+    throw e;
+  }
 }
-
 // Groups
 export async function listGroups(): Promise<Group[]> {
   return load().groups.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);

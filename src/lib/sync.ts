@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import * as LegacyFS from 'expo-file-system/legacy';
 
 import * as repo from '@/db/repo';
+import { base64ToDataUri, shrinkDataUri } from '@/lib/shrink';
 import { useStore } from '@/store';
 import type { BackupPayload, ExportedProduct } from '@/types';
 
@@ -198,6 +199,19 @@ export async function importDataFromFile(): Promise<{ success: boolean; message:
             console.warn('No se pudo restaurar imagen para:', prod.name, err);
           }
         }
+      }
+    }
+
+    // Web: el navegador guarda el catálogo en localStorage (~5-10 MB). Un respaldo del celular trae las fotos
+    // como Base64 (decenas de MB) y rutas de Android que aquí no existen: se convierten en miniaturas ligeras.
+    if (Platform.OS === 'web') {
+      for (const prod of payload.products) {
+        if (prod.image_base64) {
+          prod.image_uri = await shrinkDataUri(base64ToDataUri(prod.image_base64));
+        } else if (prod.image_uri && !/^(data:|https?:|blob:)/.test(prod.image_uri)) {
+          prod.image_uri = null; // ruta de archivo de otro dispositivo
+        }
+        delete prod.image_base64;
       }
     }
 
