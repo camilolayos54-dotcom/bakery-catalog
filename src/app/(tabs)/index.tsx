@@ -23,6 +23,7 @@ import { hasPromo } from '@/lib/cart';
 import { notify } from '@/lib/dialog';
 import { pickCover } from '@/lib/images';
 import { formatPrice, isSellablePrice, parsePrice } from '@/lib/money';
+import { makeMatcher } from '@/lib/search';
 import { useDragReorder } from '@/lib/useDragReorder';
 import { useStore } from '@/store';
 import type { Product } from '@/types';
@@ -151,35 +152,39 @@ export default function Catalog() {
   }
 
   const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
+    const match = makeMatcher(q);
+    const textOf = (p: Product) => match(p.name, groupNameById.get(p.group_id ?? -1), subNameById.get(p.subcategory_id ?? -1));
 
     // Filtro especial: Productos frecuentes (ordenados de mayor a menor frecuencia)
     if (groupId === 'frecuentes') {
       const orderMap = new Map(frequentIds.map((id, index) => [id, index]));
       return products
-        .filter((p) => orderMap.has(p.id) && (!q || p.name.toLowerCase().includes(q)))
+        .filter((p) => orderMap.has(p.id) && textOf(p))
         .sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
     }
 
     // Filtro especial: Recientes = TODOS los productos, del más nuevo al más antiguo
     if (groupId === 'recientes') {
       return products
-        .filter((p) => !q || p.name.toLowerCase().includes(q))
+        .filter(textOf)
         .sort((a, b) => b.created_at - a.created_at || b.id - a.id);
     }
 
     // Filtro especial: Promociones activas en todo el catálogo
     if (groupId === 'promociones') {
-      return products.filter((p) => hasPromo(p) && (!q || p.name.toLowerCase().includes(q)));
+      return products.filter((p) => hasPromo(p) && textOf(p));
     }
+
+    // Al escribir en el buscador se busca en TODO el catálogo, estés en la categoría que estés.
+    if (q) return products.filter(textOf);
 
     return products.filter((p) => {
       const matchGroup = groupId === null || p.group_id === groupId;
       const matchSub = subcategoryId === null || p.subcategory_id === subcategoryId;
-      const matchQuery = !q || p.name.toLowerCase().includes(q);
-      return matchGroup && matchSub && matchQuery;
+      return matchGroup && matchSub;
     });
-  }, [products, groupId, subcategoryId, query, frequentIds]);
+  }, [products, groupId, subcategoryId, query, frequentIds, groupNameById, subNameById]);
 
   // ---- Mover productos arrastrando ---------------------------------------------
   // Frecuentes y Promociones tienen su propio orden: solo se reordena en "Todos" o dentro de una categoría.

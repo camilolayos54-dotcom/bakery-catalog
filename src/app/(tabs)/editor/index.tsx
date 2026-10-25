@@ -7,6 +7,7 @@ import { SyncModal } from '@/components/SyncModal';
 import { hasPromo, promoLabel } from '@/lib/cart';
 import { coverFor } from '@/lib/cover';
 import { formatPrice } from '@/lib/money';
+import { makeMatcher } from '@/lib/search';
 import { useStore } from '@/store';
 
 export default function Editor() {
@@ -20,11 +21,11 @@ export default function Editor() {
   const subName = (id: number | null) => subcategories.find((s) => s.id === id)?.name;
 
   const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const match = makeMatcher(query);
     return products.filter(
       (p) =>
         (groupId === null || (groupId === 'none' ? p.group_id === null : p.group_id === groupId)) &&
-        (!q || p.name.toLowerCase().includes(q)),
+        match(p.name, groupName(p.group_id), subName(p.subcategory_id)),
     );
   }, [products, groupId, query]);
 
