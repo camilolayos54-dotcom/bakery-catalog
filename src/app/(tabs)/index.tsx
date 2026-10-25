@@ -1,10 +1,12 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
   FlatList,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
   Modal,
   Platform,
   Pressable,
@@ -23,7 +25,7 @@ import { hasPromo } from '@/lib/cart';
 import { notify } from '@/lib/dialog';
 import { pickCover } from '@/lib/images';
 import { formatPrice, isSellablePrice, parsePrice } from '@/lib/money';
-import { makeMatcher } from '@/lib/search';
+import { makeHaystack, makeHaystackMatcher, type Haystack } from '@/lib/search';
 import { useDragReorder } from '@/lib/useDragReorder';
 import { useStore } from '@/store';
 import type { Product } from '@/types';
@@ -55,7 +57,10 @@ export default function Catalog() {
 
   const [groupId, setGroupId] = useState<GroupFilter>(null);
   const [subcategoryId, setSubcategoryId] = useState<number | null>(null);
-  const [query, setQuery] = useState('');
+  // `text` is what the box shows (updates on every key, cheap); `query` follows it a moment later, so the
+  // product grid never makes the box lag or lose letters.
+  const [text, setText] = useState('');
+  const query = useDeferredValue(text);
 
   // Estado del Modal de Añadir Rápido
   const [showQuickModal, setShowQuickModal] = useState(false);
@@ -151,10 +156,19 @@ export default function Catalog() {
     notify('Producto añadido', `"${quickName.trim()}" ya está en el catálogo.`);
   }
 
+  const haystacks = useMemo(() => {
+    const m = new Map<number, Haystack>();
+    for (const p of products) m.set(p.id, makeHaystack(p.name, groupNameById.get(p.group_id ?? -1), subNameById.get(p.subcategory_id ?? -1)));
+    return m;
+  }, [products, groupNameById, subNameById]);
+
   const visible = useMemo(() => {
     const q = query.trim();
-    const match = makeMatcher(q);
-    const textOf = (p: Product) => match(p.name, groupNameById.get(p.group_id ?? -1), subNameById.get(p.subcategory_id ?? -1));
+    const match = makeHaystackMatcher(q);
+    const textOf = (p: Product) => {
+      const h = haystacks.get(p.id);
+      return h ? match(h) : false;
+    };
 
     // Filtro especial: Productos frecuentes (ordenados de mayor a menor frecuencia)
     if (groupId === 'frecuentes') {
@@ -184,7 +198,7 @@ export default function Catalog() {
       const matchSub = subcategoryId === null || p.subcategory_id === subcategoryId;
       return matchGroup && matchSub;
     });
-  }, [products, groupId, subcategoryId, query, frequentIds, groupNameById, subNameById]);
+  }, [products, groupId, subcategoryId, query, frequentIds, haystacks]);
 
   // ---- Mover productos arrastrando ---------------------------------------------
   // Frecuentes y Promociones tienen su propio orden: solo se reordena en "Todos" o dentro de una categoría.
@@ -214,6 +228,26 @@ export default function Catalog() {
     return dnd.drag.order.map((id) => byId.get(id)).filter((p): p is Product => !!p);
   }, [visible, dnd.drag]);
   const draggedProduct = dnd.drag ? (visible.find((p) => p.id === dnd.drag!.id) ?? null) : null;
+  // The cards are memoized and ignore handler changes, so their handlers go through this ref (always current).
+  const latest = useRef({} as {
+    increment: (id: number) => void;
+    removeFromCart: (id: number) => void;
+    edit: (id: number) => void;
+    startDrag: (id: number, e: GestureResponderEvent) => void;
+    pressOut: () => void;
+    cardLayout: (e: LayoutChangeEvent) => void;
+  });
+  latest.current = {
+    increment: (id) => {
+      if (!dragging) addToCart(id);
+    },
+    removeFromCart,
+    edit: (id) => router.push({ pathname: '/product/[id]', params: { id: String(id) } }),
+    startDrag: dnd.startDrag,
+    pressOut: dnd.onPressOut,
+    cardLayout: dnd.onCardLayout,
+  };
+
   const activeGroupObj = groups.find((g) => g.id === quickGroupId);
   const activeSubObj = subcategories.find((s) => s.id === quickSubcategoryId);
   const quickCents = parsePrice(quickPrice);
@@ -225,8 +259,11 @@ export default function Catalog() {
         <TextInput
           style={styles.search}
           placeholder="Buscar producto…"
-          value={query}
-          onChangeText={setQuery}
+          value={text}
+          onChangeText={setText}
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
           clearButtonMode="while-editing"
         />
         <Pressable
@@ -321,6 +358,9 @@ export default function Catalog() {
         onScroll={dnd.onScroll}
         onContentSizeChange={dnd.onContentSizeChange}
         scrollEventThrottle={16}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
         renderItem={({ item, index }) => {
           const qty = cart[item.id] ?? 0;
           return (
@@ -329,16 +369,14 @@ export default function Catalog() {
               width={cardWidth}
               qty={qty}
               dim={dnd.drag?.id === item.id}
-              onIncrement={() => {
-                if (!dragging) addToCart(item.id);
-              }}
-              onDecrement={() => removeFromCart(item.id)}
-              onEdit={() => router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })}
+              onIncrement={() => latest.current.increment(item.id)}
+              onDecrement={() => latest.current.removeFromCart(item.id)}
+              onEdit={() => latest.current.edit(item.id)}
               categoryName={groupNameById.get(item.group_id ?? -1) ?? null}
               subcategoryName={subNameById.get(item.subcategory_id ?? -1) ?? null}
-              onStartMove={(e) => dnd.startDrag(item.id, e)}
-              onPressOut={dnd.onPressOut}
-              onLayout={index === 0 ? dnd.onCardLayout : undefined}
+              onStartMove={(e) => latest.current.startDrag(item.id, e)}
+              onPressOut={() => latest.current.pressOut()}
+              onLayout={index === 0 ? (e) => latest.current.cardLayout(e) : undefined}
             />
           );
         }}

@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { memo } from 'react';
 import { type GestureResponderEvent, type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { hasPromo, promoLabel } from '@/lib/cart';
@@ -29,7 +30,7 @@ type Props = {
   subcategoryName?: string | null;
 };
 
-export function ProductCard({
+function ProductCardBase({
   product,
   width,
   qty,
@@ -143,6 +144,23 @@ export function ProductCard({
     </View>
   );
 }
+
+/**
+ * Re-renders only when what is drawn changes. The handlers are ignored on purpose: the screen passes closures that
+ * always call the latest functions, so typing in the search box does not redraw every card.
+ */
+export const ProductCard = memo(
+  ProductCardBase,
+  (a, b) =>
+    a.product === b.product &&
+    a.width === b.width &&
+    a.qty === b.qty &&
+    a.moving === b.moving &&
+    a.dim === b.dim &&
+    a.categoryName === b.categoryName &&
+    a.subcategoryName === b.subcategoryName &&
+    !!a.onLayout === !!b.onLayout,
+);
 
 const styles = StyleSheet.create({
   card: {
