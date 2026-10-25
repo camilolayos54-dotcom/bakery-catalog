@@ -17,6 +17,11 @@ export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
+      {/* El formulario de producto vive fuera de las pestañas: al cerrarlo no deja nada abierto en ninguna. */}
+      <Stack.Screen
+        name="product/[id]"
+        options={{ headerShown: true, title: 'Producto', headerTintColor: '#8a4b14', headerBackTitle: 'Volver' }}
+      />
     </Stack>
   );
 }

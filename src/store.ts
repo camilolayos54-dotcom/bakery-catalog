@@ -100,11 +100,15 @@ export const useStore = create<State>((set, get) => ({
   clearCart: () => set({ cart: {} }),
   finishSale: async () => {
     const currentCart = get().cart;
-    await repo.recordSale(currentCart);
-    const stats = await repo.getFrequentProductIds();
-    set({
-      cart: {},
-      frequentIds: stats.map((x) => x.product_id),
-    });
+    // The order is over once the cashier taps "Finalizar": it must never stay stuck in the cart because
+    // saving the sales statistics failed (that would look like an order that "cannot be closed").
+    set({ cart: {} });
+    try {
+      await repo.recordSale(currentCart);
+      const stats = await repo.getFrequentProductIds();
+      set({ frequentIds: stats.map((x) => x.product_id) });
+    } catch (e) {
+      console.warn('[store] no se pudieron guardar las frecuencias', e);
+    }
   },
 }));

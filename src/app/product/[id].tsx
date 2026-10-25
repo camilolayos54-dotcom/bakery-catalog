@@ -26,6 +26,12 @@ export default function ProductForm() {
   const [newGroup, setNewGroup] = useState('');
   const [newSubcategory, setNewSubcategory] = useState('');
 
+  /** Closes the form. It lives outside the tabs, so closing it leaves nothing behind in any tab. */
+  function leave() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  }
+
   useEffect(() => {
     if (!productId) return;
     repo.getProduct(productId).then((p) => {
@@ -118,7 +124,7 @@ export default function ProductForm() {
     );
     if (originalImage && originalImage !== image) removeImage(originalImage);
     await reload();
-    router.back();
+    leave();
   }
 
   async function remove() {
@@ -126,7 +132,7 @@ export default function ProductForm() {
     await repo.deleteProduct(productId!);
     removeImage(originalImage);
     await reload();
-    router.back();
+    leave();
   }
 
   const cents = parsePrice(price);
@@ -139,7 +145,11 @@ export default function ProductForm() {
 
   return (
     <ScrollView contentContainerStyle={styles.root} keyboardShouldPersistTaps="handled">
-      <Stack.Screen options={{ title: productId ? 'Editar producto' : 'Nuevo producto' }} />
+      <Stack.Screen
+        options={{
+          title: productId ? 'Editar producto' : 'Nuevo producto',
+        }}
+      />
 
       <Pressable onPress={choosePhoto} style={styles.cover}>
         {image ? (

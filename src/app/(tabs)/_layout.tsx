@@ -9,6 +9,9 @@ export default function TabsLayout() {
   return (
     <Tabs
       initialRouteName="index"
+      // El botón "atrás" de Android lleva a Productos y luego sale; no recorre el historial de pestañas
+      // (eso hacía reaparecer pantallas ya cerradas, como el formulario de producto).
+      backBehavior="initialRoute"
       screenOptions={{
         headerTintColor: '#8a4b14',
         tabBarActiveTintColor: '#b3541e',

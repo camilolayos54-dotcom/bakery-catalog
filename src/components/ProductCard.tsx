@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { type GestureResponderEvent, type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { hasPromo, promoLabel } from '@/lib/cart';
+import { coverFor } from '@/lib/cover';
 import { formatPrice } from '@/lib/money';
 import type { Product } from '@/types';
 
@@ -23,6 +24,9 @@ type Props = {
   onStartMove?: (e: GestureResponderEvent) => void;
   onPressOut?: () => void;
   onLayout?: (e: LayoutChangeEvent) => void;
+  /** Used to pick the default cover when the product has no photo. */
+  categoryName?: string | null;
+  subcategoryName?: string | null;
 };
 
 export function ProductCard({
@@ -37,8 +41,11 @@ export function ProductCard({
   onStartMove,
   onPressOut,
   onLayout,
+  categoryName,
+  subcategoryName,
 }: Props) {
   const inCart = qty > 0;
+  const cover = coverFor(product.name, categoryName, subcategoryName);
 
   return (
     <View style={[{ width, padding: 5 }, dim && { opacity: 0.3 }]} onLayout={onLayout}>
@@ -53,8 +60,8 @@ export function ProductCard({
           {product.image_uri ? (
             <Image source={{ uri: product.image_uri }} style={styles.image} contentFit="cover" />
           ) : (
-            <View style={[styles.image, styles.placeholder]}>
-              <Text style={styles.emoji}>🥖</Text>
+            <View style={[styles.image, styles.placeholder, { backgroundColor: cover.bg }]}>
+              <Text style={styles.emoji}>{cover.emoji}</Text>
             </View>
           )}
 

@@ -52,3 +52,6 @@ chat_data/
 credentials.json
 *.keystore
 *.jks
+
+# Respaldos personales de la panaderia (no subir)
+panaderia_respaldo_*.json

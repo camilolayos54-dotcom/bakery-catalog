@@ -29,6 +29,9 @@ import type { Product } from '@/types';
 
 const PAD = 8;
 
+/** Qué lista se está viendo: una categoría, todos (null) o una vista especial. */
+type GroupFilter = number | null | 'frecuentes' | 'recientes' | 'promociones';
+
 export default function Catalog() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -49,7 +52,7 @@ export default function Catalog() {
     reload,
   } = useStore();
 
-  const [groupId, setGroupId] = useState<number | null | 'frecuentes' | 'promociones'>(null);
+  const [groupId, setGroupId] = useState<GroupFilter>(null);
   const [subcategoryId, setSubcategoryId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
 
@@ -62,6 +65,9 @@ export default function Catalog() {
   const [quickGroupId, setQuickGroupId] = useState<number | null>(null);
   const [quickSubcategoryId, setQuickSubcategoryId] = useState<number | null>(null);
 
+  const groupNameById = useMemo(() => new Map(groups.map((g) => [g.id, g.name])), [groups]);
+  const subNameById = useMemo(() => new Map(subcategories.map((s) => [s.id, s.name])), [subcategories]);
+
   // Cantidad de productos con promociones
   const promoCount = useMemo(() => products.filter((p) => hasPromo(p)).length, [products]);
   // Solo cuentan los frecuentes que todavía existen en el catálogo
@@ -72,7 +78,7 @@ export default function Catalog() {
 
   // Subcategorías de la categoría seleccionada en catálogo
   const activeSubcategories = useMemo(() => {
-    if (groupId === null || groupId === 'frecuentes' || groupId === 'promociones') return [];
+    if (typeof groupId !== 'number') return [];
     return subcategories.filter((s) => s.group_id === groupId);
   }, [subcategories, groupId]);
 
@@ -82,7 +88,7 @@ export default function Catalog() {
     return subcategories.filter((s) => s.group_id === quickGroupId);
   }, [subcategories, quickGroupId]);
 
-  function handleSelectGroup(id: number | null | 'frecuentes' | 'promociones') {
+  function handleSelectGroup(id: GroupFilter) {
     setGroupId(id);
     setSubcategoryId(null); // reiniciar subcategoría al cambiar grupo
   }
@@ -96,7 +102,8 @@ export default function Catalog() {
     setQuickName('');
     setQuickPrice('');
     setQuickImage(null);
-    const targetGroupId = typeof groupId === 'number' ? groupId : (groups[0]?.id ?? null);
+    // Si no estás dentro de una categoría el producto queda "Sin categoría" (nunca se asigna a la primera por error)
+    const targetGroupId = typeof groupId === 'number' ? groupId : null;
     setQuickGroupId(targetGroupId);
     setQuickSubcategoryId(subcategoryId !== null ? subcategoryId : null);
     setShowQuickModal(true);
@@ -154,6 +161,13 @@ export default function Catalog() {
         .sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
     }
 
+    // Filtro especial: Recientes = TODOS los productos, del más nuevo al más antiguo
+    if (groupId === 'recientes') {
+      return products
+        .filter((p) => !q || p.name.toLowerCase().includes(q))
+        .sort((a, b) => b.created_at - a.created_at || b.id - a.id);
+    }
+
     // Filtro especial: Promociones activas en todo el catálogo
     if (groupId === 'promociones') {
       return products.filter((p) => hasPromo(p) && (!q || p.name.toLowerCase().includes(q)));
@@ -169,7 +183,7 @@ export default function Catalog() {
 
   // ---- Mover productos arrastrando ---------------------------------------------
   // Frecuentes y Promociones tienen su propio orden: solo se reordena en "Todos" o dentro de una categoría.
-  const canReorder = groupId !== 'frecuentes' && groupId !== 'promociones';
+  const canReorder = typeof groupId === 'number' || groupId === null;
   const visibleIds = useMemo(() => visible.map((p) => p.id), [visible]);
   const dnd = useDragReorder({
     ids: visibleIds,
@@ -184,7 +198,7 @@ export default function Catalog() {
     onBlocked: () =>
       notify(
         'Mover productos',
-        'Para cambiar el orden entra a "Todos" o a una categoría. Frecuentes y Promociones se ordenan solas.',
+        'Para cambiar el orden entra a "Todos" o a una categoría. Frecuentes, Recientes y Promociones se ordenan solas.',
       ),
   });
   const dragging = dnd.drag !== null;
@@ -227,6 +241,11 @@ export default function Catalog() {
             label={`⭐ Frecuentes${frequentCount > 0 ? ` (${frequentCount})` : ''}`}
             active={groupId === 'frecuentes'}
             onPress={() => handleSelectGroup('frecuentes')}
+          />
+          <Chip
+            label={`🕒 Recientes (${products.length})`}
+            active={groupId === 'recientes'}
+            onPress={() => handleSelectGroup('recientes')}
           />
           <Chip
             label={`🏷️ Promociones${promoCount > 0 ? ` (${promoCount})` : ''}`}
@@ -309,7 +328,9 @@ export default function Catalog() {
                 if (!dragging) addToCart(item.id);
               }}
               onDecrement={() => removeFromCart(item.id)}
-              onEdit={() => router.push(`/editor/${item.id}`)}
+              onEdit={() => router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })}
+              categoryName={groupNameById.get(item.group_id ?? -1) ?? null}
+              subcategoryName={subNameById.get(item.subcategory_id ?? -1) ?? null}
               onStartMove={(e) => dnd.startDrag(item.id, e)}
               onPressOut={dnd.onPressOut}
               onLayout={index === 0 ? dnd.onCardLayout : undefined}
@@ -350,6 +371,8 @@ export default function Catalog() {
             width={cardWidth}
             qty={cart[draggedProduct.id] ?? 0}
             moving
+            categoryName={groupNameById.get(draggedProduct.group_id ?? -1) ?? null}
+            subcategoryName={subNameById.get(draggedProduct.subcategory_id ?? -1) ?? null}
             onIncrement={() => undefined}
             onDecrement={() => undefined}
             onEdit={() => undefined}

@@ -5,6 +5,7 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } fr
 
 import { SyncModal } from '@/components/SyncModal';
 import { hasPromo, promoLabel } from '@/lib/cart';
+import { coverFor } from '@/lib/cover';
 import { formatPrice } from '@/lib/money';
 import { useStore } from '@/store';
 
@@ -30,7 +31,7 @@ export default function Editor() {
   return (
     <View style={styles.root}>
       <View style={styles.actions}>
-        <Btn label="＋ Producto" primary onPress={() => router.push('/editor/new')} />
+        <Btn label="＋ Producto" primary onPress={() => router.push({ pathname: '/product/[id]', params: { id: 'new' } })} />
         <Btn label="Categorías" onPress={() => router.push('/editor/groups')} />
         <Btn label="Carga masiva" onPress={() => router.push('/editor/bulk')} />
         <Btn label="🔄 Respaldo" onPress={() => setShowSyncModal(true)} />
@@ -81,11 +82,18 @@ export default function Editor() {
         renderItem={({ item }) => {
           const sub = subName(item.subcategory_id);
           return (
-            <Pressable style={styles.row} onPress={() => router.push(`/editor/${item.id}`)}>
+            <Pressable style={styles.row} onPress={() => router.push({ pathname: '/product/[id]', params: { id: String(item.id) } })}>
               {item.image_uri ? (
                 <Image source={{ uri: item.image_uri }} style={styles.thumb} contentFit="cover" />
               ) : (
-                <View style={[styles.thumb, styles.thumbEmpty]}><Text style={{ fontSize: 20 }}>🥖</Text></View>
+                (() => {
+                  const cover = coverFor(item.name, groupName(item.group_id), subName(item.subcategory_id));
+                  return (
+                    <View style={[styles.thumb, styles.thumbEmpty, { backgroundColor: cover.bg }]}>
+                      <Text style={{ fontSize: 22 }}>{cover.emoji}</Text>
+                    </View>
+                  );
+                })()
               )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
